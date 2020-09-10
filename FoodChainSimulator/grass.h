@@ -1,4 +1,3 @@
- 
 #ifndef _GRASS_H_
 #define _GRASS_H_
 
@@ -22,9 +21,7 @@ namespace EcoSim
 
         auto DecideChildrenLocation(const CellMatrix &map, Vector2 pos) -> std::vector<Vector2> override;
 
-        auto DisplayColor() const -> int override {
-            return ColorCode::Green;
-        }
+        auto DisplayColor() const -> int override {  return ColorCode::Green; }
         
         auto Reproduce() -> std::shared_ptr<ILivingThing> override { return std::shared_ptr<ILivingThing>(new Grass()); }
     };

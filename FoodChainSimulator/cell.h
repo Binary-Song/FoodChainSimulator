@@ -13,25 +13,18 @@ namespace EcoSim
 	/// <summary>
 	/// 游戏地图的一个格子。
 	/// </summary>
-	class Cell final
-	{
-	public:
+	class Cell  
+	{  
+		friend class CellMatrix;
 
 		/// <summary>
 		/// 指向格子中存储的内容，nullptr表示空格子。
 		/// </summary>
 		std::shared_ptr<ILivingThing> content = nullptr;
+		 
+		CellMatrix* matrix = nullptr;
 
-		/// <summary>
-		/// 格子的位置 
-		/// </summary>
-		Vector2 position = Vector2(0, 0);
-
-		/// <summary>
-		/// 禁用的格子不会被处理。
-		/// </summary>
-		bool disabled = false;
-
+	public:
 		/// <summary>
 		/// 创建一个空格子。
 		/// </summary>
@@ -43,22 +36,35 @@ namespace EcoSim
 		/// <param name="pos">格子位置</param>
 		explicit Cell(Vector2 pos) : position(pos) {}
 
-		/// <summary>
-		/// 将格子的内容移动到另一个格子中去。源格子的内容将变为空，目标格子的内容将被覆盖。
-		/// </summary>
-		/// <param name="src">源</param>
-		/// <param name="dest">目标</param>
-		/// <returns></returns>
-		auto static MoveContent(Cell& src, Cell& dest, bool& didConsumptionHappen) -> void;
+		auto Content() const-> std::shared_ptr<ILivingThing> { return content; }
 
+		auto SetContent(std::shared_ptr<ILivingThing> new_content)-> void;
+
+		/// <summary>
+		/// 格子的位置 
+		/// </summary>
+		Vector2 position = Vector2(0, 0);
+
+		/// <summary>
+		/// 禁用的格子不会被处理。
+		/// </summary>
+		bool disabled = false;
+
+		 
+		/// <summary>
+		/// 赋值已删除
+		/// </summary> 
 		auto operator=(Cell cell)->Cell & = delete;
 
+		/// <summary>
+		/// 拷贝已删除
+		/// </summary> 
 		Cell(const Cell& cell) = delete;
 	};
 
 	/// <summary>
-   /// Cell 中包含的内容，一个生物。
-   /// </summary>
+	/// Cell 中包含的内容，一个生物。
+	/// </summary>
 	class ILivingThing
 	{
 	public:
@@ -88,20 +94,26 @@ namespace EcoSim
 		/// <returns></returns>
 		auto virtual Reproduce()->std::shared_ptr<ILivingThing> = 0;
 
-
 		/// <summary>
 		/// 显示颜色。
 		/// </summary>
 		/// <returns></returns>
-		auto virtual DisplayColor() const-> int = 0; 
+		auto virtual DisplayColor() const-> int = 0;
 	};
+	 
+
 
 	/// <summary>
 	/// 一个Cell组成的方阵，用于表示地图。
 	/// </summary>
 	class CellMatrix
 	{
+		friend class Cell;
+	private:
+		std::vector<Cell> cells;
+		std::vector<Vector2> updatedCellPositions;
 	public:
+		 
 		/// <summary>
 		/// 宽度。
 		/// </summary>
@@ -178,42 +190,45 @@ namespace EcoSim
 		/// <param name="map">地图</param>
 		/// <param name="pos">此格位置</param>
 		/// <returns></returns>
-		auto SurroundingCells(Vector2 pos) const->std::vector<std::reference_wrapper<const Cell>>;
+		auto SurroundingCells(Vector2 pos) const->std::vector<std::reference_wrapper<const Cell>>; 
 
-	private:
-		std::vector<Cell> cells;
+		auto UpdatedCellPositions() -> std::vector<Vector2>{ return updatedCellPositions; } 
+
+		auto ClearCellUpdateRecord() -> void { updatedCellPositions.clear(); }
 	};
 
-		/// <summary>
-		/// 返回满足条件的格子的位置。
-		/// </summary> 
-		inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells, bool predicate(const Cell& cell)) -> std::vector<Vector2>
+
+
+	/// <summary>
+	/// 返回满足条件的格子的位置。
+	/// </summary> 
+	inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells, bool predicate(const Cell& cell)) -> std::vector<Vector2>
+	{
+		std::vector<Vector2> result;
+		for (auto&& cell : cells)
 		{
-			std::vector<Vector2> result;
-			for (auto&& cell : cells)
+			if (predicate(cell.get()))
 			{
-				if (predicate(cell.get()))
-				{
-					result.push_back(cell.get().position);
-				}
+				result.push_back(cell.get().position);
 			}
-			return result;
 		}
+		return result;
+	}
 
-		inline auto ExtractPositionsOfEmptyCells(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
-		{
-			return ExtractPositionsOfCells(cells, [](const Cell& cell) {return cell.content == nullptr; });
-		}
+	inline auto ExtractPositionsOfEmptyCells(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
+	{
+		return ExtractPositionsOfCells(cells, [](const Cell& cell) {return cell.Content() == nullptr; });
+	}
 
-		template<typename T>
-		auto ExtractPositionsOfCellsByContentType(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
-		{
-			static_assert(std::is_base_of<ILivingThing, T>::value, "T must inherit from ILivingThing.");
-			return ExtractPositionsOfCells(cells, [](const Cell& cell)
-				{ 
-					return dynamic_cast<T*>(cell.content.get()) != nullptr;
-				});
-		}
-	
+	template<typename T>
+	auto ExtractPositionsOfCellsByContentType(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
+	{
+		static_assert(std::is_base_of<ILivingThing, T>::value, "T must inherit from ILivingThing.");
+		return ExtractPositionsOfCells(cells, [](const Cell& cell)
+			{
+				return dynamic_cast<T*>(cell.Content().get()) != nullptr;
+			});
+	}
+
 } // namespace EcoSim
 #endif // _CELL_H_

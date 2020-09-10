@@ -4,14 +4,18 @@
 #include "common_includes.h"
 #include "cell.h"
 #include "mortal.h"
+#include "gendered.h"
 namespace EcoSim
 {
 	/// <summary>
 	/// 羊
 	/// </summary>
-	class Sheep final : public ILivingThing, public IMortal
+	class Sheep final : public ILivingThing, public IMortal, public IGendered
 	{
 		int health;
+
+		LivingThingGender gender;
+
 	public:
 		Sheep();
 
@@ -45,9 +49,9 @@ namespace EcoSim
 
 		auto MinimumReproduceHealth() -> int override { return minimumReproduceHealth; }
 
-		auto InitialHealth() -> int override { return initialHealth; }
+		auto InitialHealth() -> int override { return initialHealth; } 
 
-		virtual ~Sheep() {}
+		auto	 Gender() -> LivingThingGender override { return gender; }
 	};
 } // namespace EcoSim
 #endif // _GRASS_H_

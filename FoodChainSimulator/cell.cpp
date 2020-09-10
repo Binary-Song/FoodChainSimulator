@@ -1,23 +1,6 @@
 #include "cell.h"
 
  
-auto EcoSim::Cell::MoveContent(Cell& src, Cell& dest, bool& didConsumptionHappen) -> void
-{
-	// 动
-	if (src.position != dest.position)
-	{
-		didConsumptionHappen = (dest.content != nullptr);
-		dest.content = src.content;
-		src.content = nullptr; 
-	}
-	// 静
-	else
-	{
-		didConsumptionHappen = false;
-	}
-}
-
-
 auto EcoSim::CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<std::reference_wrapper<Cell>>
 {
 	std::vector<std::reference_wrapper<Cell>> resultList;
@@ -56,6 +39,7 @@ EcoSim::CellMatrix::CellMatrix(int width, int height)
 	int x = 0, y = 0;
 	for (auto&& cell : cells)
 	{
+		cell.matrix = this;
 		cell.position.x = x;
 		cell.position.y = y;
 		++x;
@@ -65,4 +49,10 @@ EcoSim::CellMatrix::CellMatrix(int width, int height)
 			++y;
 		}
 	}
+}
+
+auto EcoSim::Cell::SetContent(std::shared_ptr<ILivingThing> new_content) -> void
+{
+	content = new_content;
+	matrix->updatedCellPositions.push_back(position);
 }

@@ -33,10 +33,10 @@ namespace EcoSim
 				switch (rand() % 2) // TODO: CHANGE THIS TO 4
 				{
 				case 0:
-					cell.content = std::shared_ptr<Grass>(new Grass());
+					cell.SetContent(std::shared_ptr<Grass>(new Grass()));
 					break;
 				case 1:
-					cell.content = std::shared_ptr<Sheep>(new Sheep());
+					cell.SetContent(std::shared_ptr<Sheep>(new Sheep()));
 				default:
 					break;
 				}
@@ -46,10 +46,10 @@ namespace EcoSim
 
 	auto Game::NextStep() -> void
 	{
-		std::vector<Vector2> updatedPositions;
-		MovePhase(updatedPositions);
-		ReproducePhase(updatedPositions); 
-		eventCaller_mapUpdated.Dispatch(map, updatedPositions);
+		map.ClearCellUpdateRecord();
+		MovePhase();
+		ReproducePhase();
+		eventCaller_mapUpdated.Dispatch(map, map.UpdatedCellPositions());
 	}
 
 	auto Game::ClearDisableStates() -> void
@@ -58,24 +58,24 @@ namespace EcoSim
 			cell.disabled = false;
 	}
 
-	static void HandleConsumption(bool didEat, Cell& cell, std::vector<Vector2>& updatedPositions);
+	static void HandleConsumption(bool didEat, Cell& cell);
 
 	// 移动阶段
-	auto Game::MovePhase(std::vector<Vector2>& updatedPositions) -> void
+	auto Game::MovePhase() -> void
 	{
 		// 将禁用状态全部设为否
 		ClearDisableStates();
 		for (auto&& cell : map)
 		{
 			// 如果为空格子或禁用，就跳过
-			if (cell.content != nullptr && !cell.disabled)
-			{ 
+			if (cell.Content() != nullptr && !cell.disabled)
+			{
 				// 取得目的地
-				Vector2 dest = cell.content->DecideDestination(map, cell.position);
+				Vector2 dest = cell.Content()->DecideDestination(map, cell.position);
 
 				if (dest == cell.position) // 没动
-				{  
-					HandleConsumption(false, cell, updatedPositions);
+				{
+					HandleConsumption(false, cell);
 
 					// 禁用此格
 					cell.disabled = true;
@@ -84,42 +84,37 @@ namespace EcoSim
 				{
 					Cell& destCell = map.Access(dest);
 
-					if (destCell.content != nullptr) // 说明目的处生物被吃了
-					{ 
-						HandleConsumption(true, cell, updatedPositions);
+					if (destCell.Content() != nullptr) // 说明目的处生物被吃了
+					{
+						HandleConsumption(true, cell);
 					}
 					else
-					{ 
-						HandleConsumption(false, cell, updatedPositions);
+					{
+						HandleConsumption(false, cell);
 					}
 
 					// 禁用两格 
 					destCell.disabled = true;
 					cell.disabled = true;
 
-					// 添加到更新列表
-					updatedPositions.push_back(dest);
-					updatedPositions.push_back(cell.position);
-
 					// 移动
-					destCell.content = cell.content;
-					cell.content = nullptr;
+					destCell.SetContent(cell.Content());
+					cell.SetContent(nullptr);
 				}
 			}
 		}
 	}
 
-	static void HandleDeath(Cell& cell, std::vector<Vector2>& updatedPositions);
+	static void HandleDeath(Cell& cell);
 	/// <summary>
 	/// 处理进食行为。
 	/// </summary>
 	/// <param name="didEat">是否发生进食</param>
 	/// <param name="cell">生物所在格子</param>
 	/// <returns></returns>
-	static void HandleConsumption(bool didEat, Cell& cell, std::vector<Vector2>& updatedPositions)
+	static void HandleConsumption(bool didEat, Cell& cell)
 	{
-		ILivingThing* livingThing = cell.content.get();
-		auto mortal = dynamic_cast<IMortal*>(livingThing);
+		auto mortal = dynamic_cast<IMortal*>(cell.Content().get());
 		if (mortal)
 		{
 			if (didEat)
@@ -128,52 +123,64 @@ namespace EcoSim
 				if (mortal->Health() > mortal->MaximumHealth())
 				{
 					mortal->Health() = mortal->MaximumHealth();
-				} 
-			} 
+				}
+			}
 			mortal->Health() -= mortal->StarvationHealthHarm();
 			if (mortal->Health() <= 0)
 			{
 				// 饿死 
-				HandleDeath(cell, updatedPositions);
-			} 
-		} 
+				HandleDeath(cell);
+			}
+		}
 	}
 
-	static void HandleDeath(Cell& cell, std::vector<Vector2>& updatedPositions)
+	static void HandleDeath(Cell& cell)
 	{
-		cell.content = nullptr;
-		updatedPositions.push_back(cell.position);
+		cell.SetContent(nullptr);
 	}
 
 	// 繁殖阶段
-	auto Game::ReproducePhase(std::vector<Vector2>& updatedPositions) -> void
+	auto Game::ReproducePhase() -> void
 	{
 		// 将禁用状态全部设为否
 		ClearDisableStates();
 		for (auto&& cell : map)
 		{
 			// 如果为空格子或禁用，就跳过
-			if (cell.content != nullptr && !cell.disabled)
+			if (cell.Content() != nullptr && !cell.disabled)
 			{
-				// 取得子代位置信息
-				auto childrenPositions = cell.content->DecideChildrenLocation(map, cell.position);
-				for (auto&& childPosition : childrenPositions)
+				auto parent_mortal = std::dynamic_pointer_cast<IMortal>(cell.Content());
+
+				if (parent_mortal)// 如果亲代有生命值
 				{
-					updatedPositions.push_back(childPosition);
-
-					// 取得子代，放置于指定格子
-					Cell& childCell = map.Access(childPosition);
-
-					childCell.content = cell.content->Reproduce();
-
-					auto mortal = dynamic_cast<IMortal*>(cell.content.get());
-					if (mortal)
+					if (parent_mortal->Health() >= parent_mortal->MinimumReproduceHealth())
 					{
-						mortal->Health() = mortal->InitialHealth();
-					}
+						Cell& parent_cell = cell; // 给cell取个别名
+						// 取得子代位置信息
+						auto childrenPositions = parent_cell.Content()->DecideChildrenLocation(map, parent_cell.position);
+						for (auto&& childPos : childrenPositions)
+						{
+							Cell& child_cell = map.Access(childPos);
 
-					// 禁用子代生物所在格
-					childCell.disabled = true;
+							child_cell.SetContent(parent_cell.Content()->Reproduce());
+							// 禁用子代生物所在格
+							child_cell.disabled = true;
+						}
+					}
+				}
+				else// 如果亲代无生命值
+				{
+					Cell& parent_cell = cell; // 给cell取个别名
+					// 取得子代位置信息
+					auto childrenPositions = parent_cell.Content()->DecideChildrenLocation(map, parent_cell.position);
+					for (auto&& childPos : childrenPositions)
+					{
+						Cell& child_cell = map.Access(childPos);
+
+						child_cell.SetContent(parent_cell.Content()->Reproduce());
+						// 禁用子代生物所在格
+						child_cell.disabled = true;
+					}
 				}
 			}
 		}

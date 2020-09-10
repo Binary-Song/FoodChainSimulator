@@ -9,7 +9,6 @@
 
 namespace EcoSim
 {
- 
     /// <summary>
     /// 一个游戏
     /// </summary>
@@ -95,13 +94,13 @@ namespace EcoSim
         /// 模拟移动阶段
         /// </summary>
         /// <returns></returns>
-        auto MovePhase(std::vector<Vector2>& updatedPositions) -> void;
+        auto MovePhase( ) -> void;
 
         /// <summary>
         /// 模拟繁殖阶段
         /// </summary>
         /// <returns></returns>
-        auto ReproducePhase(std::vector<Vector2>& updatedPositions) -> void;
+        auto ReproducePhase( ) -> void;
 
  
         };

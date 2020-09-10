@@ -3,10 +3,10 @@
 #include "game.h"
 namespace EcoSim
 {
-	Sheep::Sheep()
-	{
-		health = initialHealth;
-	}
+	Sheep::Sheep() :
+		health(initialHealth),
+		gender(rand() % 2 ? LivingThingGender::Male : LivingThingGender::Female) {}
+	 
 
 	auto Sheep::DecideDestination(const CellMatrix& map, Vector2 pos) -> Vector2
 	{
@@ -28,12 +28,10 @@ namespace EcoSim
 	}
 
 	auto Sheep::DecideChildrenLocation(const CellMatrix& map, Vector2 pos) -> std::vector<Vector2>
-	{
-		if (health < 5) return std::vector<Vector2>();
-
+	{ 
 		auto surrounds = map.SurroundingCells(pos);
 		auto candidatePos = ExtractPositionsOfCells(surrounds, [](const Cell& cell) {
-			return dynamic_cast<Grass*>(cell.content.get()) || cell.content == nullptr;
+			return dynamic_cast<Grass*>(cell.Content().get()) || cell.Content() == nullptr;
 			});
 		return RandomSelect(candidatePos, Sheep::targetOffspringCount);
 	}

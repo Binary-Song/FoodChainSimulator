@@ -21,22 +21,22 @@ namespace EcoSim
         using namespace EcoSim::UI;
         SetCursorPosition(cell.position.x * 2, cell.position.y);
 
-        if (cell.content == nullptr)
+        if (cell.Content() == nullptr)
         {
             std::cout << " ";
         }
         else
         {
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), cell.content->DisplayColor()); 
-            auto mortal = dynamic_cast<IMortal*>(cell.content.get());
+            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), cell.Content()->DisplayColor());
+            auto mortal = dynamic_cast<IMortal*>(cell.Content().get());
             if (mortal)
             {
                 //putchar('0' + mortal->Health() % 10);
-                putchar('o');
+                putchar('@');
             }
             else
             {
-                putchar('o');
+                putchar('@');
             }
         }
     }
