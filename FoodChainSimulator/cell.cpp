@@ -1,7 +1,7 @@
 #include "cell.h"
 
  
-auto FoodChain::Cell::MoveContent(Cell& src, Cell& dest, bool& didConsumptionHappen) -> void
+auto EcoSim::Cell::MoveContent(Cell& src, Cell& dest, bool& didConsumptionHappen) -> void
 {
 	// 动
 	if (src.position != dest.position)
@@ -18,7 +18,7 @@ auto FoodChain::Cell::MoveContent(Cell& src, Cell& dest, bool& didConsumptionHap
 }
 
 
-auto FoodChain::CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<std::reference_wrapper<Cell>>
+auto EcoSim::CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<std::reference_wrapper<Cell>>
 {
 	std::vector<std::reference_wrapper<Cell>> resultList;
 	Vector2 offsets[]{ Vector2(0, 1), Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0),Vector2(1, 1), Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1) };
@@ -33,7 +33,7 @@ auto FoodChain::CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<std::re
 	return resultList;
 }
 
-auto FoodChain::CellMatrix::SurroundingCells(Vector2 pos)const -> std::vector<std::reference_wrapper<const Cell>>
+auto EcoSim::CellMatrix::SurroundingCells(Vector2 pos)const -> std::vector<std::reference_wrapper<const Cell>>
 {
 	std::vector<std::reference_wrapper<const Cell>> resultList;
 	Vector2 offsets[]{ Vector2(0, 1), Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0),Vector2(1, 1), Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1) };
@@ -48,7 +48,7 @@ auto FoodChain::CellMatrix::SurroundingCells(Vector2 pos)const -> std::vector<st
 }
  
  
-FoodChain::CellMatrix::CellMatrix(int width, int height)
+EcoSim::CellMatrix::CellMatrix(int width, int height)
 	: width(width),
 	height(height),
 	cells(width* height)

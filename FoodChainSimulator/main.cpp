@@ -7,7 +7,7 @@
  
 int main(int, char**) {
       
-    using namespace FoodChain; 
+    using namespace EcoSim; 
     Game game(80,30,0.01f);
     Display::Initialize(game);
     Display::DrawMap(game.Map());

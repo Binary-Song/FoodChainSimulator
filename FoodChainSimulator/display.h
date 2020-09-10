@@ -4,7 +4,7 @@
 #include "common_includes.h"
 #include "cell.h"
 #include "game.h"
-namespace FoodChain
+namespace EcoSim
 {
     class Display
     {
@@ -37,6 +37,6 @@ namespace FoodChain
         auto static MapUpdatedEventHandler(const CellMatrix& map, std::vector<Vector2> updatedPositions) -> void;
          
     };
-} // namespace FoodChain
+} // namespace EcoSim
 
 #endif // _DISPLAY_H_

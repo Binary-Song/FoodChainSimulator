@@ -1,9 +1,11 @@
 #include "game.h"
 #include "sheep.h"
 #include <algorithm>
-namespace FoodChain
+#include <stdlib.h>
+#include <time.h>
+namespace EcoSim
 {
-  
+
 	auto GenerateMap(CellMatrix& map, float density) -> void;
 	Game::Game(int width, int height, float density)
 		: map(width, height),
@@ -16,7 +18,9 @@ namespace FoodChain
 		event_raiseMessage(eventCaller_raiseMessage),
 		event_raiseProblem(eventCaller_raiseProblem)
 	{
+		srand(time(0));
 		GenerateMap(map, density);
+		activeGame = this;
 	}
 
 	auto GenerateMap(CellMatrix& map, float density) -> void
@@ -42,9 +46,10 @@ namespace FoodChain
 
 	auto Game::NextStep() -> void
 	{
-		MovePhase();
-		ReproducePhase();
-		DeathPhase();
+		std::vector<Vector2> updatedPositions;
+		MovePhase(updatedPositions);
+		ReproducePhase(updatedPositions); 
+		eventCaller_mapUpdated.Dispatch(map, updatedPositions);
 	}
 
 	auto Game::ClearDisableStates() -> void
@@ -53,60 +58,96 @@ namespace FoodChain
 			cell.disabled = false;
 	}
 
+	static void HandleConsumption(bool didEat, Cell& cell, std::vector<Vector2>& updatedPositions);
+
 	// 移动阶段
-	auto Game::MovePhase() -> void
+	auto Game::MovePhase(std::vector<Vector2>& updatedPositions) -> void
 	{
-		std::vector<Vector2> updatedPositions;
 		// 将禁用状态全部设为否
 		ClearDisableStates();
 		for (auto&& cell : map)
 		{
 			// 如果为空格子或禁用，就跳过
 			if (cell.content != nullptr && !cell.disabled)
-			{
+			{ 
 				// 取得目的地
 				Vector2 dest = cell.content->DecideDestination(map, cell.position);
-				Cell& destCell = map.Access(dest);
-				bool didConsumptionHappen;
-				
-				// 移动生物
-				Cell::MoveContent(cell, destCell, didConsumptionHappen);
 
-				auto mortal = dynamic_cast<IMortal*>(destCell.content.get());
-				if (mortal)
+				if (dest == cell.position) // 没动
+				{  
+					HandleConsumption(false, cell, updatedPositions);
+
+					// 禁用此格
+					cell.disabled = true;
+				}
+				else // 动了
 				{
-					// 吃东西加血,不吃扣血
-					if (didConsumptionHappen)
-					{  
-						mortal->Health() += consumptionEffect;
-						if (mortal->Health() > maxHealth)
-						{
-							mortal->Health() = maxHealth;
-						}
+					Cell& destCell = map.Access(dest);
+
+					if (destCell.content != nullptr) // 说明目的处生物被吃了
+					{ 
+						HandleConsumption(true, cell, updatedPositions);
 					}
 					else
-					{
-						mortal->Health() -= starvationEffect;
+					{ 
+						HandleConsumption(false, cell, updatedPositions);
 					}
+
+					// 禁用两格 
+					destCell.disabled = true;
+					cell.disabled = true;
+
+					// 添加到更新列表
+					updatedPositions.push_back(dest);
+					updatedPositions.push_back(cell.position);
+
+					// 移动
+					destCell.content = cell.content;
+					cell.content = nullptr;
 				}
-
-				// 禁用已经处理的生物所在格
-				destCell.disabled = true;
-
-				// 将起点和终点格子添加到vector中
-				updatedPositions.push_back(cell.position);
-				if (destCell.position != cell.position) 
-					updatedPositions.push_back(destCell.position);
-
-			}  
+			}
 		}
-		eventCaller_mapUpdated.Dispatch(map, updatedPositions); 
+	}
+
+	static void HandleDeath(Cell& cell, std::vector<Vector2>& updatedPositions);
+	/// <summary>
+	/// 处理进食行为。
+	/// </summary>
+	/// <param name="didEat">是否发生进食</param>
+	/// <param name="cell">生物所在格子</param>
+	/// <returns></returns>
+	static void HandleConsumption(bool didEat, Cell& cell, std::vector<Vector2>& updatedPositions)
+	{
+		ILivingThing* livingThing = cell.content.get();
+		auto mortal = dynamic_cast<IMortal*>(livingThing);
+		if (mortal)
+		{
+			if (didEat)
+			{
+				mortal->Health() += mortal->ConsumptionHealthBenifit();
+				if (mortal->Health() > mortal->MaximumHealth())
+				{
+					mortal->Health() = mortal->MaximumHealth();
+				} 
+			} 
+			mortal->Health() -= mortal->StarvationHealthHarm();
+			if (mortal->Health() <= 0)
+			{
+				// 饿死 
+				HandleDeath(cell, updatedPositions);
+			} 
+		} 
+	}
+
+	static void HandleDeath(Cell& cell, std::vector<Vector2>& updatedPositions)
+	{
+		cell.content = nullptr;
+		updatedPositions.push_back(cell.position);
 	}
 
 	// 繁殖阶段
-	auto Game::ReproducePhase() -> void
+	auto Game::ReproducePhase(std::vector<Vector2>& updatedPositions) -> void
 	{
-		std::vector<Vector2> updatedPositions;
 		// 将禁用状态全部设为否
 		ClearDisableStates();
 		for (auto&& cell : map)
@@ -119,51 +160,25 @@ namespace FoodChain
 				for (auto&& childPosition : childrenPositions)
 				{
 					updatedPositions.push_back(childPosition);
-					// 如果格子已被占，则不能在此繁殖
 
+					// 取得子代，放置于指定格子
+					Cell& childCell = map.Access(childPosition);
 
-					// TODO : 可以在此繁殖
+					childCell.content = cell.content->Reproduce();
 
-
-
-					if (map.Access(childPosition).content != nullptr)
+					auto mortal = dynamic_cast<IMortal*>(cell.content.get());
+					if (mortal)
 					{
-						throw "Cannot Reproduce here";
+						mortal->Health() = mortal->InitialHealth();
 					}
-					else
-					{
-						// 取得子代，放置于指定格子
-						Cell& childCell = map.Access(childPosition);
-						childCell.content= cell.content->Reproduce();
-						// 禁用子代生物所在格
-						childCell.disabled = true;
-					}
+
+					// 禁用子代生物所在格
+					childCell.disabled = true;
 				}
 			}
 		}
-		eventCaller_mapUpdated.Dispatch(map, updatedPositions);
 	}
 
-	// 死亡阶段
-	auto Game::DeathPhase() -> void
-	{
-		std::vector<Vector2> updatedPositions;
-		for (auto&& cell : map)
-		{
-			IMortal* mortalBeing = dynamic_cast<IMortal*>(cell.content.get());
-			// 如果格子中生物会死
-			if (cell.content != nullptr 
-				&& mortalBeing != nullptr)
-			{
-				// 生命为0
-				if (mortalBeing->Health() == 0)
-				{
-					mortalBeing->Die();
-					cell.content = nullptr;
-					updatedPositions.push_back(cell.position);
-				}
-			}
-		}
-		eventCaller_mapUpdated.Dispatch(map, updatedPositions);
-	}  
-} // namespace FoodChain
+
+	Game* Game::activeGame = nullptr;
+} // namespace EcoSim

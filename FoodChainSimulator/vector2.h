@@ -1,7 +1,7 @@
 
 #ifndef _VECTOR2_H_
 #define _VECTOR2_H_
-namespace FoodChain
+namespace EcoSim
 {
     /// <summary>
     /// 两个整数组成的向量。
@@ -33,5 +33,5 @@ namespace FoodChain
         } 
     };
  
-} // namespace FoodChain
+} // namespace EcoSim
 #endif // _VECTOR2_H_

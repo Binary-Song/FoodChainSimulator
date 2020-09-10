@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <iostream>
 #include "mortal.h"
-namespace FoodChain
+namespace EcoSim
 {
     namespace UI
     {
@@ -18,7 +18,7 @@ namespace FoodChain
      
     auto Display::DrawCell(const Cell& cell)-> void
     {
-        using namespace FoodChain::UI;
+        using namespace EcoSim::UI;
         SetCursorPosition(cell.position.x * 2, cell.position.y);
 
         if (cell.content == nullptr)
@@ -27,7 +27,7 @@ namespace FoodChain
         }
         else
         {
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), cell.content->DisplayColor());
+            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), cell.content->DisplayColor()); 
             auto mortal = dynamic_cast<IMortal*>(cell.content.get());
             if (mortal)
             {
@@ -64,11 +64,11 @@ namespace FoodChain
 
     auto Display::DrawMap(const CellMatrix &map) -> void
     {
-        using namespace FoodChain::UI;
+        using namespace EcoSim::UI;
         system("cls");
         for (auto &&cell : map)
         {
             DrawCell(cell);
         }
     }
-} // namespace FoodChain
+} // namespace EcoSim

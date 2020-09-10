@@ -7,7 +7,7 @@
 #include "grass.h"
 #include "event_system.h"
 
-namespace FoodChain
+namespace EcoSim
 {
  
     /// <summary>
@@ -17,28 +17,7 @@ namespace FoodChain
     {
     public:
 
-        /// <summary>
-        /// 最大生命值
-        /// </summary>
-        int maxHealth = 9;
-
-        /// <summary>
-        /// 进食增加的血量
-        /// </summary>
-        int consumptionEffect = 4;
-
-        /// <summary>
-        /// 饥饿减少的血量
-        /// </summary>
-        int starvationEffect = 1;
-
-        /// <summary>
-        /// 出生时的血量
-        /// </summary>
-        int initialHealth = 2;
-         
-
-   
+        static Game *activeGame; 
  
         /// <summary>
         /// 地图更新事件 
@@ -116,20 +95,16 @@ namespace FoodChain
         /// 模拟移动阶段
         /// </summary>
         /// <returns></returns>
-        auto MovePhase() -> void;
+        auto MovePhase(std::vector<Vector2>& updatedPositions) -> void;
 
         /// <summary>
         /// 模拟繁殖阶段
         /// </summary>
         /// <returns></returns>
-        auto ReproducePhase() -> void;
+        auto ReproducePhase(std::vector<Vector2>& updatedPositions) -> void;
 
-        /// <summary>
-        /// 模拟死亡阶段
-        /// </summary>
-        /// <returns></returns>
-        auto DeathPhase() -> void;
+ 
         };
-} // namespace FoodChain
+} // namespace EcoSim
 
 #endif // _GAME_H_

@@ -4,7 +4,7 @@
 #include "common_includes.h"
 #include <type_traits>
 
-namespace FoodChain
+namespace EcoSim
 {
 	class Cell;
 	class ILivingThing;
@@ -151,17 +151,17 @@ namespace FoodChain
 			return cells[coor.x + coor.y * width];
 		}
 
-		auto begin() -> std::vector<FoodChain::Cell>::iterator { return cells.begin(); }
+		auto begin() -> std::vector<EcoSim::Cell>::iterator { return cells.begin(); }
 
-		auto begin() const -> std::vector<FoodChain::Cell>::const_iterator { return cells.cbegin(); }
+		auto begin() const -> std::vector<EcoSim::Cell>::const_iterator { return cells.cbegin(); }
 
-		auto end() -> std::vector<FoodChain::Cell>::iterator { return cells.end(); }
+		auto end() -> std::vector<EcoSim::Cell>::iterator { return cells.end(); }
 
-		auto end() const -> std::vector<FoodChain::Cell>::const_iterator { return cells.cend(); }
+		auto end() const -> std::vector<EcoSim::Cell>::const_iterator { return cells.cend(); }
 
-		auto next(std::vector<FoodChain::Cell>::iterator iter) -> std::vector<FoodChain::Cell>::iterator { return ++iter; }
+		auto next(std::vector<EcoSim::Cell>::iterator iter) -> std::vector<EcoSim::Cell>::iterator { return ++iter; }
 
-		auto next(std::vector<FoodChain::Cell>::const_iterator iter) const -> std::vector<FoodChain::Cell>::const_iterator { return ++iter; }
+		auto next(std::vector<EcoSim::Cell>::const_iterator iter) const -> std::vector<EcoSim::Cell>::const_iterator { return ++iter; }
 
 
 		/// <summary>
@@ -184,7 +184,6 @@ namespace FoodChain
 		std::vector<Cell> cells;
 	};
 
-	namespace Utilities {
 		/// <summary>
 		/// 返回满足条件的格子的位置。
 		/// </summary> 
@@ -211,10 +210,10 @@ namespace FoodChain
 		{
 			static_assert(std::is_base_of<ILivingThing, T>::value, "T must inherit from ILivingThing.");
 			return ExtractPositionsOfCells(cells, [](const Cell& cell)
-				{
+				{ 
 					return dynamic_cast<T*>(cell.content.get()) != nullptr;
 				});
 		}
-	}
-} // namespace FoodChain
+	
+} // namespace EcoSim
 #endif // _CELL_H_

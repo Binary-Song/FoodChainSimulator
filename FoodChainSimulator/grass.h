@@ -4,7 +4,7 @@
 
 #include "common_includes.h"
 #include "cell.h"
-namespace FoodChain
+namespace EcoSim
 {
     /// <summary>
     /// 草
@@ -23,11 +23,10 @@ namespace FoodChain
         auto DecideChildrenLocation(const CellMatrix &map, Vector2 pos) -> std::vector<Vector2> override;
 
         auto DisplayColor() const -> int override {
-            using namespace FoodChain::Utilities;
             return ColorCode::Green;
         }
         
         auto Reproduce() -> std::shared_ptr<ILivingThing> override { return std::shared_ptr<ILivingThing>(new Grass()); }
     };
-} // namespace FoodChain
+} // namespace EcoSim
 #endif // _GRASS_H_
