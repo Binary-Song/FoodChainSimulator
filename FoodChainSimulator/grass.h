@@ -24,6 +24,8 @@ namespace EcoSim
         auto DisplayColor() const -> int override {  return ColorCode::Green; }
         
         auto Reproduce() -> std::shared_ptr<ILivingThing> override { return std::shared_ptr<ILivingThing>(new Grass()); }
+
+        auto TypeIdentifier() const -> std::string override { return "Grass"; }
     };
 } // namespace EcoSim
 #endif // _GRASS_H_

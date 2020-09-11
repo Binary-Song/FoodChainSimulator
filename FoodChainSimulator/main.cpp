@@ -8,12 +8,12 @@
 int main(int, char**) {
       
     using namespace EcoSim; 
-    Game game(80,30,0.01f);
+    Game game(80,50,0.9f);
     Display::Initialize(game);
     Display::DrawMap(game.Map());
     while (true)
     { 
-        Sleep(1000);
+        Sleep(10);
         game.NextStep(); 
     }
     return 0;

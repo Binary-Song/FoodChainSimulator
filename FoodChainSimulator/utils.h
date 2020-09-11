@@ -61,11 +61,17 @@ namespace EcoSim {
 		return RandomSelect(target, 1)[0];
 	}
 
+	/// <summary>
+	/// std::shared_ptr专用的dynamic_cast
+	/// </summary>
+	/// <typeparam name="Derived"></typeparam>
+	/// <typeparam name="Base"></typeparam>
+	/// <param name="bp"></param>
+	/// <returns></returns>
 	template<class Derived, class Base>
-	bool Is(Base* bp, Derived*& dp)
-	{
-		dp = dynamic_cast<Derived*>(bp);
-		return dp;
+	std::shared_ptr<Derived> sp_dynamic_cast(std::shared_ptr<Base> bp)
+	{ 
+		return std::dynamic_pointer_cast<Derived>(bp);
 	}
 }
 #endif

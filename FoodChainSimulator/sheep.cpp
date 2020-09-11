@@ -31,15 +31,10 @@ namespace EcoSim
 	{ 
 		auto surrounds = map.SurroundingCells(pos);
 		auto candidatePos = ExtractPositionsOfCells(surrounds, [](const Cell& cell) {
-			return dynamic_cast<Grass*>(cell.Content().get()) || cell.Content() == nullptr;
+			return sp_dynamic_cast<Grass>(cell.Content()) || cell.Content() == nullptr;
 			});
 		return RandomSelect(candidatePos, Sheep::targetOffspringCount);
-	}
-
-	auto Sheep::DisplayColor() const -> int
-	{
-		return ColorCode::Red | ColorCode::Blue | ColorCode::Green;
-	}
+	} 
 
 	int Sheep::targetOffspringCount = 1;
 
@@ -47,7 +42,7 @@ namespace EcoSim
 
 	int Sheep::consumptionHealthBenifit = 10;
 
-	int Sheep::maximumHealth = 10;
+	int Sheep::maximumHealth = 7;
 
 	int Sheep::initialHealth = 4; 
 

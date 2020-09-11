@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <time.h>
+#include "wolf.h"
 namespace EcoSim
 {
 
@@ -30,15 +31,18 @@ namespace EcoSim
 			bool shouldAddLivingThing = rand() % 10000 < density * 10000;
 			if (shouldAddLivingThing)
 			{
-				switch (rand() % 2) // TODO: CHANGE THIS TO 4
-				{
-				case 0:
+				int r = rand() % 100;
+				if (r < 90)
+				{ 
 					cell.SetContent(std::shared_ptr<Grass>(new Grass()));
-					break;
-				case 1:
+				}
+				else if (r < 99)
+				{ 
 					cell.SetContent(std::shared_ptr<Sheep>(new Sheep()));
-				default:
-					break;
+				}
+				else 
+				{
+					cell.SetContent(std::shared_ptr<Wolf>(new Wolf()));
 				}
 			}
 		}
@@ -105,16 +109,24 @@ namespace EcoSim
 		}
 	}
 
-	static void HandleDeath(Cell& cell);
+	/// <summary>
+	/// 处理死亡。
+	/// </summary>
+	/// <param name="neighborCell"></param>
+	inline void HandleDeath(Cell& cell)
+	{
+		cell.SetContent(nullptr);
+	}
+
 	/// <summary>
 	/// 处理进食行为。
 	/// </summary>
 	/// <param name="didEat">是否发生进食</param>
-	/// <param name="cell">生物所在格子</param>
+	/// <param name="neighborCell">生物所在格子</param>
 	/// <returns></returns>
 	static void HandleConsumption(bool didEat, Cell& cell)
 	{
-		auto mortal = dynamic_cast<IMortal*>(cell.Content().get());
+		auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
 		if (mortal)
 		{
 			if (didEat)
@@ -134,10 +146,21 @@ namespace EcoSim
 		}
 	}
 
-	static void HandleDeath(Cell& cell)
+
+	inline auto HandleBirth(CellMatrix& map, Cell& parent_cell) -> void
 	{
-		cell.SetContent(nullptr);
+		// 取得子代位置信息
+		auto childrenPositions = parent_cell.Content()->DecideChildrenLocation(map, parent_cell.position);
+		for (auto&& childPos : childrenPositions)
+		{
+			Cell& child_cell = map.Access(childPos);
+
+			child_cell.SetContent(parent_cell.Content()->Reproduce());
+			// 禁用子代生物所在格
+			child_cell.disabled = true;
+		}
 	}
+
 
 	// 繁殖阶段
 	auto Game::ReproducePhase() -> void
@@ -149,43 +172,51 @@ namespace EcoSim
 			// 如果为空格子或禁用，就跳过
 			if (cell.Content() != nullptr && !cell.disabled)
 			{
-				auto parent_mortal = std::dynamic_pointer_cast<IMortal>(cell.Content());
+				auto parent_mortal = sp_dynamic_cast<IMortal>(cell.Content());
 
-				if (parent_mortal)// 如果亲代有生命值
+				// 有年龄概念且年龄过高：无法生育
+				if (parent_mortal && parent_mortal->Health() < parent_mortal->MinimumReproduceHealth())
 				{
-					if (parent_mortal->Health() >= parent_mortal->MinimumReproduceHealth())
-					{
-						Cell& parent_cell = cell; // 给cell取个别名
-						// 取得子代位置信息
-						auto childrenPositions = parent_cell.Content()->DecideChildrenLocation(map, parent_cell.position);
-						for (auto&& childPos : childrenPositions)
-						{
-							Cell& child_cell = map.Access(childPos);
+					continue;
+				}
 
-							child_cell.SetContent(parent_cell.Content()->Reproduce());
-							// 禁用子代生物所在格
-							child_cell.disabled = true;
-						}
+				auto parent_gendered = sp_dynamic_cast<IGendered>(cell.Content());
+				if (parent_gendered && parent_gendered->Gender() == LivingThingGender::Female)// 有性别概念，则雌性旁边要有雄性才能生育
+				{
+					const CellMatrix& constMap = map;
+					auto surroundings = constMap.SurroundingCells(cell.position); // 找到周围生物
+
+					// 找到周围雄性同种且本回合内未繁殖过的生物 存放在male_positions里
+					auto male_positions = ExtractPositionsOfCells(surroundings, [&cell](const Cell& neighborCell)
+						{
+							auto gendered_neighbor = sp_dynamic_cast<IGendered>(neighborCell.Content());
+							return (gendered_neighbor != nullptr // 有性别
+								&& gendered_neighbor->Gender() == LivingThingGender::Male // 雄性
+								&& neighborCell.disabled == false // 本回合内未繁殖
+								&& neighborCell.Content()->TypeIdentifier() == cell.Content()->TypeIdentifier() // 同种
+								);
+						});
+
+					if (male_positions.size() != 0)
+					{
+						// 繁殖后的雄性将被禁用，本回合不能再繁殖 
+						map.Access(male_positions[rand() % male_positions.size()]).disabled = true;
+						// 以雌性为中点，进行繁殖
+						HandleBirth(map, cell);
 					}
 				}
-				else// 如果亲代无生命值
-				{
-					Cell& parent_cell = cell; // 给cell取个别名
-					// 取得子代位置信息
-					auto childrenPositions = parent_cell.Content()->DecideChildrenLocation(map, parent_cell.position);
-					for (auto&& childPos : childrenPositions)
-					{
-						Cell& child_cell = map.Access(childPos);
 
-						child_cell.SetContent(parent_cell.Content()->Reproduce());
-						// 禁用子代生物所在格
-						child_cell.disabled = true;
-					}
+				if (!parent_gendered) // 没有性别概念，则直接生育
+				{
+					HandleBirth(map, cell);
 				}
 			}
 		}
 	}
 
-
 	Game* Game::activeGame = nullptr;
-} // namespace EcoSim
+}
+
+
+
+// namespace EcoSim

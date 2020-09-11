@@ -2,7 +2,7 @@
 #define _CELL_H_
 
 #include "common_includes.h"
-#include <type_traits>
+#include <functional>
 
 namespace EcoSim
 {
@@ -99,6 +99,12 @@ namespace EcoSim
 		/// </summary>
 		/// <returns></returns>
 		auto virtual DisplayColor() const-> int = 0;
+
+		/// <summary>
+		/// 返回类型名称。
+		/// </summary>
+		/// <returns></returns>
+		auto virtual TypeIdentifier() const->std::string = 0;
 	};
 	 
 
@@ -197,12 +203,26 @@ namespace EcoSim
 		auto ClearCellUpdateRecord() -> void { updatedCellPositions.clear(); }
 	};
 
-
+	/// <summary>
+	/// 返回 格子的位置。
+	/// </summary> 
+	inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
+	{
+		std::vector<Vector2> result;
+		for (auto&& cell : cells)
+		{
+			 
+				result.push_back(cell.get().position);
+			 
+		}
+		return result;
+	}
 
 	/// <summary>
 	/// 返回满足条件的格子的位置。
 	/// </summary> 
-	inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells, bool predicate(const Cell& cell)) -> std::vector<Vector2>
+	inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells, std::function<bool(const Cell&)> predicate) 
+		-> std::vector<Vector2>
 	{
 		std::vector<Vector2> result;
 		for (auto&& cell : cells)
@@ -226,7 +246,7 @@ namespace EcoSim
 		static_assert(std::is_base_of<ILivingThing, T>::value, "T must inherit from ILivingThing.");
 		return ExtractPositionsOfCells(cells, [](const Cell& cell)
 			{
-				return dynamic_cast<T*>(cell.Content().get()) != nullptr;
+				return sp_dynamic_cast<T>(cell.Content()) != nullptr;
 			});
 	}
 

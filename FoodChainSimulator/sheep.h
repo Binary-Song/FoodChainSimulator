@@ -35,7 +35,7 @@ namespace EcoSim
 
 		auto DecideChildrenLocation(const CellMatrix& map, Vector2 pos)->std::vector<Vector2> override;
 
-		auto DisplayColor() const -> int override;
+		auto DisplayColor() const -> int override{ return ColorCode::Red | ColorCode::Blue | ColorCode::Green; }
 
 		auto Reproduce() -> std::shared_ptr<ILivingThing> override { return std::shared_ptr<ILivingThing>(new Sheep()); }
 
@@ -52,6 +52,8 @@ namespace EcoSim
 		auto InitialHealth() -> int override { return initialHealth; } 
 
 		auto	 Gender() -> LivingThingGender override { return gender; }
+
+		auto TypeIdentifier() const -> std::string override { return "Sheep"; }
 	};
 } // namespace EcoSim
 #endif // _GRASS_H_
