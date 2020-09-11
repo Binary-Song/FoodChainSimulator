@@ -16,31 +16,30 @@ namespace EcoSim
 		}
 	} // namespace UI
 
+	static CHAR_INFO* buffer = nullptr;
 
 	static char Hex(int number)
 	{
 		if (number < 10)
 		{
 			return '0' + number;
-		} 
-		return 'A' + number - 10; 
+		}
+		return 'A' + number - 10;
 	}
 
-	auto Display::DrawCell(const Cell& cell)-> void
+	auto get_cell_text(const Cell& cell) -> int
 	{
 		using namespace EcoSim::UI;
-		SetCursorPosition(cell.position.x * 2, cell.position.y);
-
 		if (cell.Content() == nullptr)
 		{
-			std::cout << " ";
+			return ' ';
 		}
 		else
 		{
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), cell.Content()->DisplayColor());
-		/*	auto gend = sp_dynamic_cast<IGendered>(cell.Content());
+			/*
+			auto gend = sp_dynamic_cast<IGendered>(cell.Content());
 			if (gend)
-			{ 
+			{
 				if(gend->Gender()== LivingThingGender::Male)
 				{
 					putchar('x');
@@ -48,32 +47,47 @@ namespace EcoSim
 				else
 				{
 					putchar('o');
-				} 
+				}
 			}
 			else
 			{
 				putchar('.');
-			} */
-
+			}
+			*/
 			auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
 			if (mortal)
 			{
-				putchar( Hex(mortal->Health()));
+				return (Hex(mortal->Health()));
 			}
-			else
-			{
-				putchar('.');
-			}
+			return ('.');
+		}
+	}
+
+	auto Display::DisplayBuffer() -> void
+	{
+		COORD sizeToWrite = { Width,Height };
+		COORD startPos = { 0,0 };
+		SMALL_RECT rcRegion = { 0, 0, Width - 1, Height - 1 };
+		WriteConsoleOutput(GetStdHandle(STD_OUTPUT_HANDLE), buffer, sizeToWrite, startPos, &rcRegion);
+	}
+
+	auto Display::BufferCell(const Cell& cell)-> void
+	{
+		buffer[cell.position.y * Width + cell.position.x*2].Char.AsciiChar = get_cell_text(cell);
+		if (cell.Content())
+		{ 
+			buffer[cell.position.y * Width + cell.position.x*2].Attributes = cell.Content()->DisplayColor();
 		}
 	}
 
 	auto Display::MapUpdatedEventHandler(const CellMatrix& map, std::vector<Vector2> updatedPositions) -> void
 	{
-		//DrawMap(map);
+		// DrawMap(map);
 		for (auto& pos : updatedPositions)
 		{
-			DrawCell(map.Access(pos));
+			BufferCell(map.Access(pos));
 		}
+		DisplayBuffer();
 	}
 
 
@@ -85,17 +99,38 @@ namespace EcoSim
 	{
 		game.event_mapUpdated.Subscribe(MapUpdatedEventHandler);
 
+		// 最大化显示
 		HWND hwnd = GetConsoleWindow();
 		ShowWindow(hwnd, SW_SHOWMAXIMIZED);
+
+		// 禁止改变大小
+		HWND consoleWindow = GetConsoleWindow();
+		SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZE & ~WS_SIZEBOX);
+
+		// 计算行列数
+		/*CONSOLE_SCREEN_BUFFER_INFO csbi;
+		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+		Width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+		Height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;*/
+
 	}
 
 	auto Display::DrawMap(const CellMatrix& map) -> void
 	{
+		Width = map.width *2;
+		Height = map.height;
+
+		assert(buffer == nullptr);
+		buffer = new CHAR_INFO[Height * Width]{};
+
 		using namespace EcoSim::UI;
 		system("cls");
 		for (auto&& cell : map)
 		{
-			DrawCell(cell);
+			BufferCell(cell);
 		}
 	}
+
+	int Display::Width = 0;
+	int Display::Height = 0;
 } // namespace EcoSim

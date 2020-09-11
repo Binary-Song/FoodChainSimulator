@@ -9,11 +9,11 @@ int main(int, char**) {
       
     using namespace EcoSim; 
     Game game(80,50,0.9f);
+ 
     Display::Initialize(game);
     Display::DrawMap(game.Map());
     while (true)
     { 
-        Sleep(10);
         game.NextStep(); 
     }
     return 0;

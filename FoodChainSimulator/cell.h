@@ -118,8 +118,12 @@ namespace EcoSim
 	private:
 		std::vector<Cell> cells;
 		std::vector<Vector2> updatedCellPositions;
+
 	public:
 		 
+		using iterator = std::vector<EcoSim::Cell>::iterator;
+		using const_iterator = std::vector<EcoSim::Cell>::const_iterator;
+
 		/// <summary>
 		/// 宽度。
 		/// </summary>
@@ -169,17 +173,17 @@ namespace EcoSim
 			return cells[coor.x + coor.y * width];
 		}
 
-		auto begin() -> std::vector<EcoSim::Cell>::iterator { return cells.begin(); }
+		auto begin() -> iterator { return cells.begin(); }
 
-		auto begin() const -> std::vector<EcoSim::Cell>::const_iterator { return cells.cbegin(); }
+		auto begin() const -> const_iterator { return cells.cbegin(); }
 
-		auto end() -> std::vector<EcoSim::Cell>::iterator { return cells.end(); }
+		auto end() -> iterator { return cells.end(); }
 
-		auto end() const -> std::vector<EcoSim::Cell>::const_iterator { return cells.cend(); }
+		auto end() const -> const_iterator { return cells.cend(); }
 
-		auto next(std::vector<EcoSim::Cell>::iterator iter) -> std::vector<EcoSim::Cell>::iterator { return ++iter; }
+		auto next( iterator iter) -> iterator { return ++iter; }
 
-		auto next(std::vector<EcoSim::Cell>::const_iterator iter) const -> std::vector<EcoSim::Cell>::const_iterator { return ++iter; }
+		auto next( const_iterator iter) const -> const_iterator { return ++iter; }
 
 
 		/// <summary>

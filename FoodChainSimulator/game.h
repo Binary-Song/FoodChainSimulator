@@ -6,6 +6,7 @@
 #include "cell.h"
 #include "grass.h"
 #include "event_system.h"
+#include <mutex>
 
 namespace EcoSim
 {
@@ -15,6 +16,19 @@ namespace EcoSim
     class Game final
     {
     public:
+        
+        struct MapSegment
+        {
+            CellMatrix::iterator begin, end;
+
+            MapSegment(CellMatrix::iterator begin, CellMatrix::iterator end) : begin(begin), end(end) {}
+        };
+
+        struct MapSplitResult
+        {
+            std::vector <MapSegment> mainSegments;
+            std::vector <MapSegment> gapSegments;
+        };
 
         static Game *activeGame; 
  
@@ -45,9 +59,15 @@ namespace EcoSim
         EventCaller<EventType_MapUpdated> eventCaller_mapUpdated;
         EventCaller<EventType_RaiseMessage> eventCaller_raiseMessage; 
         EventCaller<EventType_RaiseProblem> eventCaller_raiseProblem;
+         
+        MapSplitResult splitRes;
  
     public:
- 
+        /// <summary>
+        /// 单个线程处理的最少格子数
+        /// </summary>
+        static const int threadMinimumLoad = 500;
+
         /// <summary>
         /// 地图更新事件
         /// </summary>
@@ -62,7 +82,7 @@ namespace EcoSim
         /// 报告问题事件
         /// </summary>
         Event<EventType_RaiseProblem> event_raiseProblem;
-         
+          
         /// <summary>
         /// 用随机地图创建游戏
         /// </summary>
@@ -70,7 +90,7 @@ namespace EcoSim
         /// <param name="height">高</param>
         /// <param name="density">生物密度（0-1）</param>
         Game(int width, int height, float density);
- 
+    
         /// <summary>
         /// 继续模拟下一个周期
         /// </summary>
@@ -83,26 +103,31 @@ namespace EcoSim
         /// <returns></returns>
         auto Map() -> const CellMatrix & { return map; }
 
+        std::mutex mutex;
     private:
         /// <summary>
         /// 将所有格子都设置为可用
         /// </summary>
         /// <returns></returns>
         auto ClearDisableStates() -> void; 
-        
+         
         /// <summary>
         /// 模拟移动阶段
         /// </summary>
         /// <returns></returns>
-        auto MovePhase( ) -> void;
+        auto MovePhase(CellMatrix::iterator begin, CellMatrix::iterator end) -> void;
 
         /// <summary>
         /// 模拟繁殖阶段
         /// </summary>
         /// <returns></returns>
-        auto ReproducePhase( ) -> void;
+        auto ReproducePhase(CellMatrix::iterator begin, CellMatrix::iterator end) -> void;
+         
+        auto SplitMap() -> MapSplitResult;
 
- 
+        void HandleBirth(CellMatrix& map, Cell& parent_cell);
+        void HandleConsumption(bool didEat, Cell& cell);
+        void HandleDeath(Cell& cell);
         };
 } // namespace EcoSim
 

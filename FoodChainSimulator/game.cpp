@@ -4,9 +4,14 @@
 #include <stdlib.h>
 #include <time.h>
 #include "wolf.h"
+#include <utility>
+// TODO: Get rid of this
+#include <thread>
+
 namespace EcoSim
 {
 	auto GenerateMap(CellMatrix& map, float density) -> void;
+
 	Game::Game(int width, int height, float density)
 		: map(width, height),
 
@@ -21,6 +26,7 @@ namespace EcoSim
 		srand(time(0));
 		GenerateMap(map, density);
 		activeGame = this;
+		splitRes = SplitMap();
 	}
 
 	auto GenerateMap(CellMatrix& map, float density) -> void
@@ -46,13 +52,81 @@ namespace EcoSim
 			}
 		}
 	}
+ 
+	auto Game::SplitMap() -> MapSplitResult
+	{
+		int mainSegRowCount = threadMinimumLoad / map.width + 1; 
+		MapSplitResult result;
+		CellMatrix::iterator begin, end;
+		bool mainSeg = true;
+		for (CellMatrix::iterator begin = map.begin(); begin != map.end(); begin = end , mainSeg = !mainSeg)
+		{
+			if (mainSeg)
+			{
+				auto increment = map.width * mainSegRowCount;
+				if (increment > map.end() - begin) end = map.end();
+				else end = begin + increment;
+				result.mainSegments.push_back(MapSegment(begin, end));
+			}
+			else
+			{
+				auto increment = map.width * 2;
+				if (increment > map.end() - begin) end = map.end();
+				else end = begin + increment;
+				result.gapSegments.push_back(MapSegment(begin, end));
+			}  
+		}
+		return result;
+	}
 
 	auto Game::NextStep() -> void
 	{
 		map.ClearCellUpdateRecord();
-		MovePhase();
-		ReproducePhase();
-		eventCaller_mapUpdated.Dispatch(map, map.UpdatedCellPositions());
+		
+		//for (auto& seg : splitRes.mainSegments)
+		//{
+		//	std::cout << "MainSeg:" << (seg.begin - map.begin()) << "-" << (seg.end - map.begin()) << std::endl;
+		//}
+		//for (auto& seg : splitRes.gapSegments)
+		//{
+		//	std::cout << "GapSeg:" << (seg.begin - map.begin()) << "-" << (seg.end - map.begin()) << std::endl;
+		//}
+		
+		std::vector<std::thread> threads;
+
+		for (auto& seg : splitRes.mainSegments)
+		{
+			threads.push_back(std::thread(&Game:: MovePhase,this, seg.begin, seg.end));
+		}
+		
+		for (auto& thread : threads)
+		{
+			thread.join();
+		}  
+
+		for (auto& seg : splitRes.gapSegments)
+		{
+			MovePhase(seg.begin, seg.end);
+		}
+
+		threads.clear();
+
+		for (auto& seg : splitRes.mainSegments)
+		{
+			threads.push_back(std::thread(&Game::ReproducePhase,this, seg.begin, seg.end));
+		}
+
+		for (auto& thread : threads)
+		{
+			thread.join();
+		}
+
+		for (auto& seg : splitRes.gapSegments)
+		{
+			ReproducePhase(seg.begin, seg.end);
+		} 
+		 
+	 	eventCaller_mapUpdated.Dispatch(map, map.UpdatedCellPositions());
 	}
 
 	auto Game::ClearDisableStates() -> void
@@ -64,12 +138,13 @@ namespace EcoSim
 	static auto HandleConsumption(bool didEat, Cell& cell) -> void;
 
 	// 移动阶段
-	auto Game::MovePhase() -> void
+	auto Game::MovePhase(CellMatrix::iterator begin, CellMatrix::iterator end) -> void
 	{
 		// 将禁用状态全部设为否
 		ClearDisableStates();
-		for (auto&& cell : map)
+		for (auto loop_iter = begin; loop_iter != end; ++loop_iter)
 		{
+			Cell& cell = *loop_iter;
 			// 如果为空格子或禁用，就跳过
 			if (cell.Content() != nullptr && !cell.disabled)
 			{
@@ -99,10 +174,12 @@ namespace EcoSim
 					// 禁用两格 
 					destCell.disabled = true;
 					cell.disabled = true;
-
+					
+					mutex.lock();
 					// 移动
 					destCell.SetContent(cell.Content());
 					cell.SetContent(nullptr);
+					mutex.unlock();
 				}
 			}
 		}
@@ -112,9 +189,11 @@ namespace EcoSim
 	/// 处理死亡。
 	/// </summary>
 	/// <param name="neighborCell"></param>
-	inline void HandleDeath(Cell& cell)
-	{
+	void Game::HandleDeath(Cell& cell)
+	{ 
+		mutex.lock();
 		cell.SetContent(nullptr);
+		mutex.unlock();
 	}
 
 	/// <summary>
@@ -123,7 +202,7 @@ namespace EcoSim
 	/// <param name="didEat">是否发生进食</param>
 	/// <param name="neighborCell">生物所在格子</param>
 	/// <returns></returns>
-	static void HandleConsumption(bool didEat, Cell& cell)
+	void Game::HandleConsumption(bool didEat, Cell& cell)
 	{
 		auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
 		if (mortal)
@@ -138,7 +217,7 @@ namespace EcoSim
 			}
 			mortal->Health() -= mortal->StarvationHealthHarm();
 			if (mortal->Health() <= 0)
-			{
+			{ 
 				// 饿死 
 				HandleDeath(cell);
 			}
@@ -146,15 +225,17 @@ namespace EcoSim
 	}
 
 
-	inline auto HandleBirth(CellMatrix& map, Cell& parent_cell) -> void
+
+	auto Game::HandleBirth(CellMatrix& map, Cell& parent_cell) -> void
 	{
 		// 取得子代位置信息
 		auto childrenPositions = parent_cell.Content()->DecideChildrenLocation(map, parent_cell.position);
 		for (auto&& childPos : childrenPositions)
 		{
 			Cell& child_cell = map.Access(childPos);
-
+			mutex.lock();
 			child_cell.SetContent(parent_cell.Content()->Reproduce());
+			mutex.unlock();
 			// 禁用子代生物所在格
 			child_cell.disabled = true;
 		}
@@ -162,12 +243,13 @@ namespace EcoSim
 
 
 	// 繁殖阶段
-	auto Game::ReproducePhase() -> void
+	auto Game::ReproducePhase(CellMatrix::iterator begin, CellMatrix::iterator end) -> void
 	{
 		// 将禁用状态全部设为否
 		ClearDisableStates();
-		for (auto&& cell : map)
+		for (auto loop_iter = begin; loop_iter != end; ++loop_iter)
 		{
+			Cell& cell = *loop_iter;
 			// 如果为空格子或禁用，就跳过
 			if (cell.Content() != nullptr && !cell.disabled)
 			{
