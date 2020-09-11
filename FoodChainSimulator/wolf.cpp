@@ -46,16 +46,16 @@ namespace EcoSim
 		return RandomSelect(candidatePos, Wolf::targetOffspringCount);
 	} 
 
-	int Wolf::targetOffspringCount = 1;
+	int Wolf::targetOffspringCount = 3;
 
 	int Wolf::starvationHealthHarm = 1;
 
 	int Wolf::consumptionHealthBenifit = 15;
 
-	int Wolf::maximumHealth = 25;
+	int Wolf::maximumHealth = 15;
 
-	int Wolf::initialHealth = 20;
+	int Wolf::initialHealth = 13;
 
-	int Wolf::minimumReproduceHealth = 22;
+	int Wolf::minimumReproduceHealth = 14;
 }
 

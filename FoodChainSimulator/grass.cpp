@@ -9,5 +9,5 @@ namespace EcoSim
         return RandomSelect(empties, Grass::targetOffspringCount); 
     }
 
-    int Grass::targetOffspringCount = 3;
+    int Grass::targetOffspringCount = 5;
 } // namespace EcoSim

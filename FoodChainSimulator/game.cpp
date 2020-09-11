@@ -6,7 +6,6 @@
 #include "wolf.h"
 namespace EcoSim
 {
-
 	auto GenerateMap(CellMatrix& map, float density) -> void;
 	Game::Game(int width, int height, float density)
 		: map(width, height),
@@ -62,7 +61,7 @@ namespace EcoSim
 			cell.disabled = false;
 	}
 
-	static void HandleConsumption(bool didEat, Cell& cell);
+	static auto HandleConsumption(bool didEat, Cell& cell) -> void;
 
 	// 移动阶段
 	auto Game::MovePhase() -> void

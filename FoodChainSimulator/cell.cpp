@@ -1,6 +1,5 @@
 #include "cell.h"
 
- 
 auto EcoSim::CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<std::reference_wrapper<Cell>>
 {
 	std::vector<std::reference_wrapper<Cell>> resultList;

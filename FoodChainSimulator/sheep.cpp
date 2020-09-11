@@ -40,11 +40,11 @@ namespace EcoSim
 
 	int Sheep::starvationHealthHarm = 1;
 
-	int Sheep::consumptionHealthBenifit = 10;
+	int Sheep::consumptionHealthBenifit = 8;
 
-	int Sheep::maximumHealth = 7;
+	int Sheep::maximumHealth = 8;
 
-	int Sheep::initialHealth = 4; 
+	int Sheep::initialHealth = 6; 
 
-	int Sheep::minimumReproduceHealth = 5;
+	int Sheep::minimumReproduceHealth = 7;
 }
