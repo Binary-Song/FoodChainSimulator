@@ -2,11 +2,15 @@
 #include "grass.h"
 #include "utils.h"
 #include "sheep.h"
+#include "random_gen.h"
 namespace EcoSim
-{  
+{   
+
 	Wolf::Wolf() :
 		health(initialHealth),
-		gender(rand() % 2 ? LivingThingGender::Male : LivingThingGender::Female) {}
+		gender(Rand() % 2 ? LivingThingGender::Male : LivingThingGender::Female),
+		randVal(Rand())
+	{}
 
 
 	auto Wolf::DecideDestination(const CellMatrix& map, Vector2 pos) -> Vector2
@@ -18,21 +22,21 @@ namespace EcoSim
 		if (sheepPos.size() > 0)
 			return RandomSelect(sheepPos);
 
-		// 若无，则找到周围所有 格子的位置
-		auto okPos = ExtractPositionsOfCells(surrounds);
+		// 若无，则找到周围所有草或空格子的位置
+		auto okPos = ExtractPositionsOfCells(surrounds, [](const Cell& cell) {
+			return (cell.Content() == nullptr || sp_dynamic_cast<Grass>(cell.Content()));
+			});
 		
 		// 若有，则随机选一个
 		if (okPos.size() > 0)
 		{
 			auto pos = RandomSelect(okPos);
-			if (sp_dynamic_cast<Grass>(map.Access(pos).Content()))
+			if (sp_dynamic_cast<Grass>(map.Access(pos).Content()))// 如果是草，则还要抵消掉加血
 			{
 				 health -= consumptionHealthBenifit;
 			}
 			return pos;
 		}
-			
-
 		// 若无，则不动。
 		return pos;
 	}
@@ -46,16 +50,18 @@ namespace EcoSim
 		return RandomSelect(candidatePos, Wolf::targetOffspringCount);
 	} 
 
-	int Wolf::targetOffspringCount = 3;
+	int Wolf::targetOffspringCount = 1;
 
 	int Wolf::starvationHealthHarm = 1;
 
-	int Wolf::consumptionHealthBenifit = 15;
+	int Wolf::consumptionHealthBenifit = 10;
 
-	int Wolf::maximumHealth = 15;
+	int Wolf::maximumHealth = 28;
 
-	int Wolf::initialHealth = 13;
+	int Wolf::initialHealth = 15;
 
-	int Wolf::minimumReproduceHealth = 14;
+	int Wolf::minimumReproduceHealth = 16;
+
+	std::atomic<int> Wolf::population(0);
 }
 

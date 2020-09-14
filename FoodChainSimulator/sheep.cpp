@@ -5,7 +5,7 @@ namespace EcoSim
 {
 	Sheep::Sheep() :
 		health(initialHealth),
-		gender(rand() % 2 ? LivingThingGender::Male : LivingThingGender::Female) {}
+		gender(Rand() % 2 ? LivingThingGender::Male : LivingThingGender::Female) {}
 	 
 
 	auto Sheep::DecideDestination(const CellMatrix& map, Vector2 pos) -> Vector2
@@ -47,4 +47,6 @@ namespace EcoSim
 	int Sheep::initialHealth = 6; 
 
 	int Sheep::minimumReproduceHealth = 7;
+
+	std::atomic<int> Sheep::population(0);
 }

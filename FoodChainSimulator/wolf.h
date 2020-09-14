@@ -5,6 +5,7 @@
 #include "cell.h"
 #include "mortal.h"
 #include "gendered.h"
+#include <atomic>
 namespace EcoSim
 {
 	/// <summary>
@@ -14,10 +15,14 @@ namespace EcoSim
 	{
 		int health;
 
+		int randVal;
+
 		LivingThingGender gender;
 
 	public:
-		Wolf();
+		Wolf(); 
+
+		static std::atomic<int> population;
 
 		static int starvationHealthHarm;
 
@@ -35,7 +40,7 @@ namespace EcoSim
 
 		auto DecideChildrenLocation(const CellMatrix& map, Vector2 pos)->std::vector<Vector2> override;
 
-		auto DisplayColor() const -> int override { return ColorCode::Red; }
+		auto DisplayColor() const -> int override { return  ColorCode::Red|ColorCode::Intensity; }
 
 		auto Reproduce() -> std::shared_ptr<ILivingThing> override { return std::shared_ptr<ILivingThing>(new Wolf()); }
 
@@ -54,6 +59,10 @@ namespace EcoSim
 		auto	 Gender() -> LivingThingGender override { return gender; }
 
 		auto TypeIdentifier() const -> std::string override { return "Wolf"; }
+
+		auto Die() const -> void override { population--; }
+
+		auto Birth() const -> void override { population++; }
 	};
 } // namespace EcoSim
 #endif // _GRASS_H_

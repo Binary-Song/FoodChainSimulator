@@ -5,6 +5,7 @@
 #include "cell.h"
 #include "mortal.h"
 #include "gendered.h"
+#include <atomic>
 namespace EcoSim
 {
 	/// <summary>
@@ -18,6 +19,9 @@ namespace EcoSim
 
 	public:
 		Sheep();
+		 
+
+		static std::atomic<int> population;
 
 		static int starvationHealthHarm;
 
@@ -54,6 +58,10 @@ namespace EcoSim
 		auto	 Gender() -> LivingThingGender override { return gender; }
 
 		auto TypeIdentifier() const -> std::string override { return "Sheep"; }
+
+		auto Die() const -> void override {  population -- ; }
+
+		auto Birth() const -> void override { population++; }
 	};
 } // namespace EcoSim
 #endif // _GRASS_H_

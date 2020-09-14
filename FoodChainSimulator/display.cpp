@@ -36,38 +36,51 @@ namespace EcoSim
 		}
 		else
 		{
-			/*
-			auto gend = sp_dynamic_cast<IGendered>(cell.Content());
-			if (gend)
+			if (Display::displayMode == 0)
 			{
-				if(gend->Gender()== LivingThingGender::Male)
+				auto grass = sp_dynamic_cast<Grass>(cell.Content());
+				if (grass)
 				{
-					putchar('x');
+					return '.';
 				}
-				else
+				return '*';
+			}
+			else if (Display::displayMode == 1)
+			{
+				auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
+				if (mortal)
 				{
-					putchar('o');
+					return (Hex(mortal->Health()));
 				}
+				return ('.');
 			}
 			else
 			{
-				putchar('.');
-			}
-			*/
-			auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
-			if (mortal)
-			{
-				return (Hex(mortal->Health()));
-			}
-			return ('.');
+				auto gend = sp_dynamic_cast<IGendered>(cell.Content());
+				if (gend)
+				{
+					if (gend->Gender() == LivingThingGender::Male)
+					{
+						return ('x');
+					}
+					else
+					{
+						return ('o');
+					}
+				}
+				else
+				{ 
+					return ('.');
+				}
+			} 
 		}
 	}
 
 	auto Display::DisplayBuffer() -> void
 	{
-		COORD sizeToWrite = { Width,Height };
+		COORD sizeToWrite = { (SHORT)Width,(SHORT)Height };
 		COORD startPos = { 0,0 };
-		SMALL_RECT rcRegion = { 0, 0, Width - 1, Height - 1 };
+		SMALL_RECT rcRegion = { 0, 0, (SHORT)( Width - 1),(SHORT)( Height - 1 )};
 		WriteConsoleOutput(GetStdHandle(STD_OUTPUT_HANDLE), buffer, sizeToWrite, startPos, &rcRegion);
 	}
 
@@ -133,4 +146,5 @@ namespace EcoSim
 
 	int Display::Width = 0;
 	int Display::Height = 0;
+	int Display::displayMode = 0;
 } // namespace EcoSim

@@ -2,7 +2,16 @@
 #define _UTILS_H_
 #include <vector>
 #include <cassert>
+#include <string>
+#include <stdio.h>
+#include <stdarg.h>
+#include <algorithm>
+#include <random>
+#include <memory>
+#include "random_gen.h"
 namespace EcoSim {
+
+	std::mt19937& Randomizer();
 
 	struct ColorCode
 	{
@@ -11,27 +20,6 @@ namespace EcoSim {
 		static const int Green = 0x0002;
 		static const int Intensity = 0x0008;
 	};
-
-	/// <summary>
-	/// 将前n项随机插入进全部项中。
-	/// </summary>
-	/// <typeparam name="BidiIter">双向迭代器</typeparam>
-	/// <param name="begin">头</param>
-	/// <param name="end">尾后</param>
-	/// <param name="n">洗牌的项数</param>
-	/// <returns></returns>
-	template<class BidiIter >
-	BidiIter Shuffle(BidiIter begin, BidiIter end, size_t n) {
-		size_t left = std::distance(begin, end);
-		while (n--) {
-			BidiIter r = begin;
-			std::advance(r, rand() % left);
-			std::swap(*begin, *r);
-			++begin;
-			--left;
-		}
-		return begin;
-	}
 
 	/// <summary>
 	/// 随机选择n项。
@@ -43,9 +31,9 @@ namespace EcoSim {
 	template<class T>
 	std::vector<T> RandomSelect(std::vector<T> target, size_t n)
 	{
-		n = std::min(target.size(), n);
-		auto end = Shuffle(target.begin(), target.end(), n);
-		return std::vector<T>(target.begin(), end);
+		n = target.size() > n ? n : target.size();
+		std::shuffle(target.begin(), target.end(), Randomizer());
+		return std::vector<T>(target.begin(), target.begin() + n);
 	}
 
 	/// <summary>
@@ -73,5 +61,7 @@ namespace EcoSim {
 	{ 
 		return std::dynamic_pointer_cast<Derived>(bp);
 	}
+
+	std::wstring GetExeDir();
 }
 #endif

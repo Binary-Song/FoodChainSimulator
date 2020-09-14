@@ -4,15 +4,15 @@
 #include <stdlib.h>
 #include <time.h>
 #include "wolf.h"
-#include <utility>
-// TODO: Get rid of this
+#include <utility> 
 #include <thread>
-
+#include "random_gen.h"
 namespace EcoSim
-{
+{ 
+
 	auto GenerateMap(CellMatrix& map, float density) -> void;
 
-	Game::Game(int width, int height, float density)
+	Game::Game(int width, int height, float density )
 		: map(width, height),
 
 		eventCaller_mapUpdated(),
@@ -22,8 +22,7 @@ namespace EcoSim
 		event_mapUpdated(eventCaller_mapUpdated),
 		event_raiseMessage(eventCaller_raiseMessage),
 		event_raiseProblem(eventCaller_raiseProblem)
-	{
-		srand(time(0));
+	{ 
 		GenerateMap(map, density);
 		activeGame = this;
 		splitRes = SplitMap();
@@ -33,21 +32,24 @@ namespace EcoSim
 	{
 		for (auto&& cell : map)
 		{
-			bool shouldAddLivingThing = rand() % 10000 < density * 10000;
+			bool shouldAddLivingThing = Rand() % 10000 < density * 10000;
 			if (shouldAddLivingThing)
 			{
-				int r = rand() % 100;
+				int r = Rand() % 100;
 				if (r < 90)
 				{ 
 					cell.SetContent(std::shared_ptr<Grass>(new Grass()));
+					cell.Content()->Birth();
 				}
 				else if (r < 99)
 				{ 
 					cell.SetContent(std::shared_ptr<Sheep>(new Sheep()));
+					cell.Content()->Birth();
 				}
 				else 
 				{
 					cell.SetContent(std::shared_ptr<Wolf>(new Wolf()));
+					cell.Content()->Birth();
 				}
 			}
 		}
@@ -55,8 +57,14 @@ namespace EcoSim
  
 	auto Game::SplitMap() -> MapSplitResult
 	{
-		int mainSegRowCount = threadMinimumLoad / map.width + 1; 
 		MapSplitResult result;
+		if (threadMinimumLoad < 0)
+		{
+			result.mainSegments = { MapSegment(map.begin(),map.end()) };
+			return result;
+		}
+		int mainSegRowCount = threadMinimumLoad / map.width + 1; 
+		
 		CellMatrix::iterator begin, end;
 		bool mainSeg = true;
 		for (CellMatrix::iterator begin = map.begin(); begin != map.end(); begin = end , mainSeg = !mainSeg)
@@ -83,14 +91,7 @@ namespace EcoSim
 	{
 		map.ClearCellUpdateRecord();
 		
-		//for (auto& seg : splitRes.mainSegments)
-		//{
-		//	std::cout << "MainSeg:" << (seg.begin - map.begin()) << "-" << (seg.end - map.begin()) << std::endl;
-		//}
-		//for (auto& seg : splitRes.gapSegments)
-		//{
-		//	std::cout << "GapSeg:" << (seg.begin - map.begin()) << "-" << (seg.end - map.begin()) << std::endl;
-		//}
+ 
 		
 		std::vector<std::thread> threads;
 
@@ -135,8 +136,6 @@ namespace EcoSim
 			cell.disabled = false;
 	}
 
-	static auto HandleConsumption(bool didEat, Cell& cell) -> void;
-
 	// 移动阶段
 	auto Game::MovePhase(CellMatrix::iterator begin, CellMatrix::iterator end) -> void
 	{
@@ -161,9 +160,10 @@ namespace EcoSim
 				else // 动了
 				{
 					Cell& destCell = map.Access(dest);
-
+					
 					if (destCell.Content() != nullptr) // 说明目的处生物被吃了
 					{
+						destCell.Content()->Die();
 						HandleConsumption(true, cell);
 					}
 					else
@@ -192,7 +192,8 @@ namespace EcoSim
 	void Game::HandleDeath(Cell& cell)
 	{ 
 		mutex.lock();
-		cell.SetContent(nullptr);
+		cell.Content()->Die();
+		cell.SetContent(nullptr); 
 		mutex.unlock();
 	}
 
@@ -234,7 +235,12 @@ namespace EcoSim
 		{
 			Cell& child_cell = map.Access(childPos);
 			mutex.lock();
+			if (child_cell.Content())
+			{
+				child_cell.Content()->Die();
+			}
 			child_cell.SetContent(parent_cell.Content()->Reproduce());
+			child_cell.Content()->Birth(); 
 			mutex.unlock();
 			// 禁用子代生物所在格
 			child_cell.disabled = true;
@@ -281,7 +287,7 @@ namespace EcoSim
 					if (male_positions.size() != 0)
 					{
 						// 繁殖后的雄性将被禁用，本回合不能再繁殖 
-						map.Access(male_positions[rand() % male_positions.size()]).disabled = true;
+						map.Access(male_positions[Rand() % male_positions.size()]).disabled = true;
 						// 以雌性为中点，进行繁殖
 						HandleBirth(map, cell);
 					}
@@ -296,6 +302,7 @@ namespace EcoSim
 	}
 
 	Game* Game::activeGame = nullptr;
+	int Game::threadMinimumLoad = 99999;
 }
 
 

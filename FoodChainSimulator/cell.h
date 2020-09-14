@@ -69,7 +69,6 @@ namespace EcoSim
 	{
 	public:
 		virtual ~ILivingThing() {}
-
 		/// <summary>
 		/// 移动阶段，决定移动的目的地。移动到非空格子内表示捕食。
 		/// </summary>
@@ -104,7 +103,11 @@ namespace EcoSim
 		/// 返回类型名称。
 		/// </summary>
 		/// <returns></returns>
-		auto virtual TypeIdentifier() const->std::string = 0;
+		auto virtual TypeIdentifier() const -> std::string = 0;
+
+		auto virtual Birth() const -> void = 0;
+
+		auto virtual Die() const -> void = 0;
 	};
 	 
 
@@ -167,10 +170,11 @@ namespace EcoSim
 		/// </summary>
 		/// <param name="coor">坐标</param>
 		/// <returns></returns>
-		auto Access(Vector2 coor) const -> const Cell&
+		auto Access(Vector2 coor) const -> const Cell&;
+
+		auto LinearPosition(Vector2 coor) const -> size_t
 		{
-			assert(IsValid(coor));
-			return cells[coor.x + coor.y * width];
+			return coor.x + coor.y * width;
 		}
 
 		auto begin() -> iterator { return cells.begin(); }
@@ -215,9 +219,7 @@ namespace EcoSim
 		std::vector<Vector2> result;
 		for (auto&& cell : cells)
 		{
-			 
-				result.push_back(cell.get().position);
-			 
+			result.push_back(cell.get().position); 
 		}
 		return result;
 	}

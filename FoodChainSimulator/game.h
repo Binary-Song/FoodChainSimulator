@@ -7,9 +7,11 @@
 #include "grass.h"
 #include "event_system.h"
 #include <mutex>
+#include "random_gen.h"
 
 namespace EcoSim
 {
+
     /// <summary>
     /// 一个游戏
     /// </summary>
@@ -66,7 +68,7 @@ namespace EcoSim
         /// <summary>
         /// 单个线程处理的最少格子数
         /// </summary>
-        static const int threadMinimumLoad = 500;
+        static int threadMinimumLoad;
 
         /// <summary>
         /// 地图更新事件
@@ -89,7 +91,7 @@ namespace EcoSim
         /// <param name="width">宽</param>
         /// <param name="height">高</param>
         /// <param name="density">生物密度（0-1）</param>
-        Game(int width, int height, float density);
+        Game(int width, int height, float density );
     
         /// <summary>
         /// 继续模拟下一个周期

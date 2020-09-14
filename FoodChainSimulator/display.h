@@ -9,11 +9,12 @@
 namespace EcoSim
 {
 	class Display
-	{  
+	{
 		static int Width;
 		static int Height;
-		
 	public:
+		 
+		static int displayMode;
 
 		/// <summary>
 		/// 初始化显示设置

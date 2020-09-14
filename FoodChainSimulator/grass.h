@@ -3,6 +3,7 @@
 
 #include "common_includes.h"
 #include "cell.h"
+#include <atomic>
 namespace EcoSim
 {
     /// <summary>
@@ -11,6 +12,9 @@ namespace EcoSim
     class Grass final : public ILivingThing
     { 
     public: 
+         
+
+        static std::atomic<int> population;
 
         /// <summary>
         /// 目标后代个数，实际个数受空间限制，不会超过此目标。
@@ -26,6 +30,10 @@ namespace EcoSim
         auto Reproduce() -> std::shared_ptr<ILivingThing> override { return std::shared_ptr<ILivingThing>(new Grass()); }
 
         auto TypeIdentifier() const -> std::string override { return "Grass"; }
+
+        auto Die() const -> void override { population--; }
+
+        auto Birth() const -> void override { population++; }
     };
 } // namespace EcoSim
 #endif // _GRASS_H_

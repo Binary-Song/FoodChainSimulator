@@ -1,5 +1,6 @@
 #include "grass.h"
 #include <algorithm>
+#include <atomic>
 namespace EcoSim
 {
     auto Grass::DecideChildrenLocation(const CellMatrix &map, Vector2 pos) -> std::vector<Vector2>
@@ -8,6 +9,8 @@ namespace EcoSim
         auto empties = ExtractPositionsOfEmptyCells(surrounds);
         return RandomSelect(empties, Grass::targetOffspringCount); 
     }
+    
+    std::atomic<int> Grass::population(0);
 
-    int Grass::targetOffspringCount = 5;
+    int Grass::targetOffspringCount = 5;  
 } // namespace EcoSim

@@ -27,9 +27,6 @@
     <ClCompile Include="game.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="test.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="cell.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -37,6 +34,18 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="wolf.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="config_loader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="random_gen.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="recorder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="utils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -75,6 +84,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="gendered.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="config_loader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="random_gen.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="recorder.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

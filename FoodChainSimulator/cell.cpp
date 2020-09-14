@@ -1,5 +1,18 @@
 #include "cell.h"
 
+
+/// <summary>
+/// 取得方阵中的一个格子。
+/// </summary>
+/// <param name="coor">坐标</param>
+/// <returns></returns>
+
+auto EcoSim::CellMatrix::Access(Vector2 coor) const -> const Cell&
+{
+	assert(IsValid(coor));
+	return cells[coor.x + coor.y * width];
+}
+
 auto EcoSim::CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<std::reference_wrapper<Cell>>
 {
 	std::vector<std::reference_wrapper<Cell>> resultList;
@@ -51,7 +64,7 @@ EcoSim::CellMatrix::CellMatrix(int width, int height)
 }
 
 auto EcoSim::Cell::SetContent(std::shared_ptr<ILivingThing> new_content) -> void
-{
+{ 
 	content = new_content;
 	matrix->updatedCellPositions.push_back(position);
 }
