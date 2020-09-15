@@ -10,20 +10,22 @@ namespace EcoSim
 		health(initialHealth),
 		gender(Rand() % 2 ? LivingThingGender::Male : LivingThingGender::Female),
 		randVal(Rand())
-	{}
+	{
+		Birth();
+	}
 
 
 	auto Wolf::DecideDestination(const CellMatrix& map, Vector2 pos) -> Vector2
 	{
 		// 找到周围所有羊的位置
 		auto surrounds = map.SurroundingCells(pos);
-		auto sheepPos = ExtractPositionsOfCellsByContentType<Sheep>(surrounds);
+		auto sheepPos = map.ExtractCellPositions<Sheep>(surrounds);
 		// 若有，则随机选一个
 		if (sheepPos.size() > 0)
 			return RandomSelect(sheepPos);
 
 		// 若无，则找到周围所有草或空格子的位置
-		auto okPos = ExtractPositionsOfCells(surrounds, [](const Cell& cell) {
+		auto okPos = map.ExtractCellPositions(surrounds, [](const Cell& cell) {
 			return (cell.Content() == nullptr || sp_dynamic_cast<Grass>(cell.Content()));
 			});
 		
@@ -44,7 +46,7 @@ namespace EcoSim
 	auto Wolf::DecideChildrenLocation(const CellMatrix& map, Vector2 pos)->std::vector<Vector2> 
 	{
 		auto surrounds = map.SurroundingCells(pos);
-		auto candidatePos = ExtractPositionsOfCells(surrounds, [](const Cell& cell) {
+		auto candidatePos = map.ExtractCellPositions(surrounds, [](const Cell& cell) {
 			return sp_dynamic_cast<Grass>(cell.Content()) || cell.Content() == nullptr;
 			});
 		return RandomSelect(candidatePos, Wolf::targetOffspringCount);

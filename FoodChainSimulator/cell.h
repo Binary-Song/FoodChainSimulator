@@ -1,9 +1,10 @@
-#ifndef _CELL_H_
-#define _CELL_H_
-
-#include "common_includes.h"
+#pragma once
+#include <memory>
 #include <functional>
-
+#include <vector> 
+#include <mutex>
+#include "vector2.h"
+#include "utils_memory.h"
 namespace EcoSim
 {
 	class Cell;
@@ -11,184 +12,177 @@ namespace EcoSim
 	class CellMatrix;
 
 	/// <summary>
-	/// 游戏地图的一个格子。
+	/// 一个地块格子。可以装下一个生物。
 	/// </summary>
-	class Cell  
-	{  
+	class Cell
+	{
 		friend class CellMatrix;
 
 		/// <summary>
-		/// 指向格子中存储的内容，nullptr表示空格子。
+		/// Cell中存放的生物对象指针。null表示Cell为空。
 		/// </summary>
 		std::shared_ptr<ILivingThing> content = nullptr;
-		 
+
+		/// <summary>
+		/// 属于哪个地图。
+		/// </summary>
 		CellMatrix* matrix = nullptr;
 
 	public:
-		/// <summary>
-		/// 创建一个空格子。
-		/// </summary>
-		explicit Cell() {}
 
 		/// <summary>
-		/// 创建一个空格子。
-		/// </summary>
-		/// <param name="pos">格子位置</param>
-		explicit Cell(Vector2 pos) : position(pos) {}
-
-		auto Content() const-> std::shared_ptr<ILivingThing> { return content; }
-
-		auto SetContent(std::shared_ptr<ILivingThing> new_content)-> void;
-
-		/// <summary>
-		/// 格子的位置 
+		/// Cell的位置。
 		/// </summary>
 		Vector2 position = Vector2(0, 0);
 
 		/// <summary>
-		/// 禁用的格子不会被处理。
+		/// Cell是否被标记为不处理。
 		/// </summary>
 		bool disabled = false;
 
-		 
 		/// <summary>
-		/// 赋值已删除
-		/// </summary> 
-		auto operator=(Cell cell)->Cell & = delete;
+		/// 构造一个空的Cell。
+		/// </summary>
+		explicit Cell() {}
 
 		/// <summary>
-		/// 拷贝已删除
+		/// 构造一个空的Cell，指定位置。
+		/// </summary>
+		/// <param name="pos"></param>
+		explicit Cell(Vector2 pos) : position(pos) {}
+
+		/// <summary>
+		/// Cell中存放的生物对象指针。null表示Cell为空。
+		/// </summary>
+		/// <returns></returns>
+		auto Content() const -> std::shared_ptr<ILivingThing> { return content; }
+
+		/// <summary>
+		/// 用生物占领此Cell。如果占领前Cell中已有生物，则该生物死亡。
 		/// </summary> 
+		void OccupyWith(std::shared_ptr<ILivingThing> living_thing);
+
+		/// <summary>
+		/// 在Cell中放置生物。当前Cell必须为空。
+		/// </summary> 
+		void FillWith(std::shared_ptr<ILivingThing> living_thing);
+
+		/// <summary>
+		/// 将Cell内的生物移动到另一个Cell中，将导致目的地生物死亡。此Cell不可为空。
+		/// </summary> 
+		void MoveTo(Cell& dest);
+
+		/// <summary>
+		/// 给Cell内的生物造成伤害，可能会杀死此生物。
+		/// </summary>  
+		void Damage();
+
+		/// <summary>
+		/// 给Cell内的生物回复生命。
+		/// </summary> 
+		void Heal();
+
+		/// <summary>
+		/// 不允许给Cell赋值。
+		/// </summary> 
+		auto operator=(const Cell& cell)->Cell & = delete;
+
+		/// <summary>
+		/// 不允许拷贝Cell。
+		/// </summary>
+		/// <param name="cell"></param>
 		Cell(const Cell& cell) = delete;
 	};
 
 	/// <summary>
-	/// Cell 中包含的内容，一个生物。
-	/// </summary>
-	class ILivingThing
-	{
-	public:
-		virtual ~ILivingThing() {}
-		/// <summary>
-		/// 移动阶段，决定移动的目的地。移动到非空格子内表示捕食。
-		/// </summary>
-		/// <param name="map">地图</param>
-		/// <param name="pos">此格位置</param>
-		/// <returns></returns>
-		auto virtual DecideDestination(const CellMatrix& map, Vector2 pos)->Vector2 = 0;
-
-		/// <summary>
-		/// 繁殖阶段，决定在哪个位置生成子代。 
-		/// </summary>
-		/// <param name="map">地图</param>
-		/// <param name="pos">此格位置</param>
-		/// <returns></returns>
-		auto virtual DecideChildrenLocation(const CellMatrix& map, Vector2 pos)->std::vector<Vector2> = 0;
-
-		/// <summary>
-		/// 繁殖阶段，构造子代对象。
-		/// </summary>
-		/// <param name="map">地图</param>
-		/// <param name="pos">此格位置</param>
-		/// <returns></returns>
-		auto virtual Reproduce()->std::shared_ptr<ILivingThing> = 0;
-
-		/// <summary>
-		/// 显示颜色。
-		/// </summary>
-		/// <returns></returns>
-		auto virtual DisplayColor() const-> int = 0;
-
-		/// <summary>
-		/// 返回类型名称。
-		/// </summary>
-		/// <returns></returns>
-		auto virtual TypeIdentifier() const -> std::string = 0;
-
-		auto virtual Birth() const -> void = 0;
-
-		auto virtual Die() const -> void = 0;
-	};
-	 
-
-
-	/// <summary>
-	/// 一个Cell组成的方阵，用于表示地图。
+	/// 由Cell组成的矩阵。表示游戏地图。
 	/// </summary>
 	class CellMatrix
 	{
 		friend class Cell;
 	private:
+		/// <summary>
+		/// 组成矩阵的Cell。
+		/// </summary>
 		std::vector<Cell> cells;
-		std::vector<Vector2> updatedCellPositions;
-
-	public:
-		 
-		using iterator = std::vector<EcoSim::Cell>::iterator;
-		using const_iterator = std::vector<EcoSim::Cell>::const_iterator;
 
 		/// <summary>
-		/// 宽度。
+		/// 每一回合，被更新的Cell的位置都会被存放在这里。
+		/// </summary>
+		std::vector<Vector2> updatedCellPositions;
+
+		std::mutex mutex_updatedCellPositions;
+
+	public:
+
+		using iterator = std::vector<Cell>::iterator;
+
+		using const_iterator = std::vector<Cell>::const_iterator;
+
+		/// <summary>
+		/// 矩阵的宽度。
 		/// </summary>
 		const int width;
 
 		/// <summary>
-		/// 高度。
+		/// 矩阵的高度。
 		/// </summary>
 		const int height;
 
 		/// <summary>
-		///  指定高和宽，构造新的方阵。
+		/// 构造一个格子矩阵。
 		/// </summary>
-		/// <param name="width">宽</param>
-		/// <param name="height">高</param>
 		CellMatrix(int width, int height);
 
 		/// <summary>
-		/// 判定一个坐标是否合法。
-		/// </summary>
-		/// <param name="coor">坐标</param>
-		/// <returns></returns>
-		auto IsValid(Vector2 coor) const -> bool
-		{
-			return (coor.x >= 0 && coor.x < width&& coor.y >= 0 && coor.y < height);
-		}
+		/// 坐标是否有效。
+		/// </summary> 
+		auto IsValid(Vector2 coor) const -> bool;
 
 		/// <summary>
-		/// 取得方阵中的一个格子。
-		/// </summary>
-		/// <param name="coor">坐标</param>
-		/// <returns></returns>
-		auto Access(Vector2 coor) -> Cell&
-		{
-			assert(IsValid(coor));
-			return cells[coor.x + coor.y * width];
-		}
+		/// 指定位置，返回Cell引用。
+		/// </summary> 
+		auto Access(Vector2 coor)->Cell&;
 
 		/// <summary>
-		/// 取得方阵中的一个格子。
-		/// </summary>
-		/// <param name="coor">坐标</param>
-		/// <returns></returns>
+		/// 指定位置，返回Cell引用。
+		/// </summary> 
 		auto Access(Vector2 coor) const -> const Cell&;
 
-		auto LinearPosition(Vector2 coor) const -> size_t
-		{
-			return coor.x + coor.y * width;
-		}
+		/// <summary>
+		/// 二维坐标转换为一维坐标
+		/// </summary> 
+		auto LinearPosition(Vector2 coor) const->size_t;
 
+		/// <summary>
+		/// 返回首迭代器。
+		/// </summary> 
 		auto begin() -> iterator { return cells.begin(); }
 
+		/// <summary>
+		/// 返回首迭代器。
+		/// </summary> 
 		auto begin() const -> const_iterator { return cells.cbegin(); }
 
+		/// <summary>
+		/// 返回尾后迭代器。
+		/// </summary> 
 		auto end() -> iterator { return cells.end(); }
 
+		/// <summary>
+		/// 返回尾后迭代器。
+		/// </summary> 
 		auto end() const -> const_iterator { return cells.cend(); }
 
-		auto next( iterator iter) -> iterator { return ++iter; }
+		/// <summary>
+		/// 返回下一个迭代器。
+		/// </summary> 
+		auto next(iterator iter) -> iterator { return ++iter; }
 
-		auto next( const_iterator iter) const -> const_iterator { return ++iter; }
-
+		/// <summary>
+		/// 返回下一个迭代器。
+		/// </summary> 
+		auto next(const_iterator iter) const -> const_iterator { return ++iter; }
 
 		/// <summary>
 		/// 返回位置周围的至多9个格子。越界的不会包括在内。
@@ -196,7 +190,7 @@ namespace EcoSim
 		/// <param name="map">地图</param>
 		/// <param name="pos">此格位置</param>
 		/// <returns></returns>
-		auto SurroundingCells(Vector2 pos)->std::vector<std::reference_wrapper<Cell>>;
+		auto SurroundingCells(Vector2 pos)->std::vector<Cell*>;
 
 		/// <summary>
 		/// 返回位置周围的至多9个格子。越界的不会包括在内。
@@ -204,57 +198,50 @@ namespace EcoSim
 		/// <param name="map">地图</param>
 		/// <param name="pos">此格位置</param>
 		/// <returns></returns>
-		auto SurroundingCells(Vector2 pos) const->std::vector<std::reference_wrapper<const Cell>>; 
+		auto SurroundingCells(Vector2 pos) const->const std::vector< Cell*>;
 
-		auto UpdatedCellPositions() -> std::vector<Vector2>{ return updatedCellPositions; } 
+		/// <summary>
+		/// 返回所有被更新的Cell的位置。
+		/// </summary> 
+		auto UpdatedCellPositions()->std::vector<Vector2>;
 
-		auto ClearCellUpdateRecord() -> void { updatedCellPositions.clear(); }
+		/// <summary>
+		/// 清空Cell更新记录。
+		/// </summary> 
+		auto ClearCellUpdateRecord() -> void;
+
+		/// <summary>
+		/// 取Cell集合对应的坐标集合。
+		/// </summary> 
+		static auto ExtractCellPositions(const std::vector<Cell*>& cells)
+			->std::vector<Vector2>;
+
+		/// <summary>
+		/// 取Cell集合对应的坐标集合。指定筛选Cell的条件。
+		/// </summary> 
+		static auto ExtractCellPositions(const std::vector<Cell*>& cells
+			, std::function<bool(const Cell&)> predicate)
+			->std::vector<Vector2>;
+
+		/// <summary>
+		/// 取Cell集合对应的坐标集合。只有空Cell会被包含。
+		/// </summary>
+		/// <param name="cells"></param>
+		/// <returns></returns>
+		static auto ExtractEmptyCellPositions(const std::vector<Cell*>& cells)
+			->std::vector<Vector2>;
+
+		/// <summary>
+		/// 取Cell集合对应的坐标集合。只有内容是类型是T的会被包含。T必须继承自ILivingThing
+		/// </summary> 
+		template <typename T>
+		static auto ExtractCellPositions(const std::vector<Cell*>& cells)
+			->std::vector<Vector2>
+		{
+			return ExtractCellPositions(cells, [](const Cell& cell)
+				{
+					return sp_dynamic_cast<T>(cell.Content()) != nullptr;
+				});
+		}
 	};
-
-	/// <summary>
-	/// 返回 格子的位置。
-	/// </summary> 
-	inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
-	{
-		std::vector<Vector2> result;
-		for (auto&& cell : cells)
-		{
-			result.push_back(cell.get().position); 
-		}
-		return result;
-	}
-
-	/// <summary>
-	/// 返回满足条件的格子的位置。
-	/// </summary> 
-	inline auto ExtractPositionsOfCells(const std::vector<std::reference_wrapper<const Cell>>& cells, std::function<bool(const Cell&)> predicate) 
-		-> std::vector<Vector2>
-	{
-		std::vector<Vector2> result;
-		for (auto&& cell : cells)
-		{
-			if (predicate(cell.get()))
-			{
-				result.push_back(cell.get().position);
-			}
-		}
-		return result;
-	}
-
-	inline auto ExtractPositionsOfEmptyCells(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
-	{
-		return ExtractPositionsOfCells(cells, [](const Cell& cell) {return cell.Content() == nullptr; });
-	}
-
-	template<typename T>
-	auto ExtractPositionsOfCellsByContentType(const std::vector<std::reference_wrapper<const Cell>>& cells) -> std::vector<Vector2>
-	{
-		static_assert(std::is_base_of<ILivingThing, T>::value, "T must inherit from ILivingThing.");
-		return ExtractPositionsOfCells(cells, [](const Cell& cell)
-			{
-				return sp_dynamic_cast<T>(cell.Content()) != nullptr;
-			});
-	}
-
 } // namespace EcoSim
-#endif // _CELL_H_

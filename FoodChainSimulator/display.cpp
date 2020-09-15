@@ -47,7 +47,7 @@ namespace EcoSim
 			}
 			else if (Display::displayMode == 1)
 			{
-				auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
+				auto mortal = sp_dynamic_cast<IAnimal>(cell.Content());
 				if (mortal)
 				{
 					return (Hex(mortal->Health()));
@@ -55,8 +55,8 @@ namespace EcoSim
 				return ('.');
 			}
 			else
-			{
-				auto gend = sp_dynamic_cast<IGendered>(cell.Content());
+			{ 
+				auto gend = sp_dynamic_cast<IAnimal>(cell.Content());
 				if (gend)
 				{
 					if (gend->Gender() == LivingThingGender::Male)

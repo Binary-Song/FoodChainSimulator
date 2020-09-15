@@ -1,31 +1,28 @@
-#include "game.h"
-#include "sheep.h"
 #include <algorithm>
 #include <stdlib.h>
-#include <time.h>
-#include "wolf.h"
 #include <utility> 
 #include <thread>
+#include <time.h>
+#include <functional>
+
+#include "game.h"
+#include "sheep.h"
+
+#include "wolf.h"
+
 #include "random_gen.h"
 namespace EcoSim
-{ 
+{
 
 	auto GenerateMap(CellMatrix& map, float density) -> void;
 
-	Game::Game(int width, int height, float density )
+	Game::Game(int width, int height, float density)
 		: map(width, height),
-
-		eventCaller_mapUpdated(),
-		eventCaller_raiseMessage(),
-		eventCaller_raiseProblem(),
-
-		event_mapUpdated(eventCaller_mapUpdated),
-		event_raiseMessage(eventCaller_raiseMessage),
-		event_raiseProblem(eventCaller_raiseProblem)
-	{ 
+		event_mapUpdated(eventCaller_mapUpdated)
+	{
 		GenerateMap(map, density);
 		activeGame = this;
-		splitRes = SplitMap();
+		mapPieces = SplitMap();
 	}
 
 	auto GenerateMap(CellMatrix& map, float density) -> void
@@ -37,97 +34,67 @@ namespace EcoSim
 			{
 				int r = Rand() % 100;
 				if (r < 90)
-				{ 
-					cell.SetContent(std::shared_ptr<Grass>(new Grass()));
-					cell.Content()->Birth();
+				{
+					cell.FillWith(std::shared_ptr<Grass>(new Grass()));
 				}
 				else if (r < 99)
-				{ 
-					cell.SetContent(std::shared_ptr<Sheep>(new Sheep()));
-					cell.Content()->Birth();
-				}
-				else 
 				{
-					cell.SetContent(std::shared_ptr<Wolf>(new Wolf()));
-					cell.Content()->Birth();
+					cell.FillWith(std::shared_ptr<Sheep>(new Sheep()));
+				}
+				else
+				{
+					cell.FillWith(std::shared_ptr<Wolf>(new Wolf()));
 				}
 			}
 		}
 	}
- 
-	auto Game::SplitMap() -> MapSplitResult
+
+	auto Game::SplitMap() -> std::vector<MapSegment>
 	{
-		MapSplitResult result;
+		std::vector<MapSegment> result;
 		if (threadMinimumLoad < 0)
 		{
-			result.mainSegments = { MapSegment(map.begin(),map.end()) };
+			result = { MapSegment(map.begin(), map.end()) };
 			return result;
 		}
-		int mainSegRowCount = threadMinimumLoad / map.width + 1; 
-		
-		CellMatrix::iterator begin, end;
-		bool mainSeg = true;
-		for (CellMatrix::iterator begin = map.begin(); begin != map.end(); begin = end , mainSeg = !mainSeg)
+		int seg_cell_count = std::max((threadMinimumLoad + map.width - 1) / map.width, 6)
+			* map.width;
+
+		auto begin = map.begin();
+		while (begin + seg_cell_count <= map.end())
 		{
-			if (mainSeg)
-			{
-				auto increment = map.width * mainSegRowCount;
-				if (increment > map.end() - begin) end = map.end();
-				else end = begin + increment;
-				result.mainSegments.push_back(MapSegment(begin, end));
-			}
-			else
-			{
-				auto increment = map.width * 2;
-				if (increment > map.end() - begin) end = map.end();
-				else end = begin + increment;
-				result.gapSegments.push_back(MapSegment(begin, end));
-			}  
+			result.push_back(MapSegment(begin, begin + seg_cell_count));
+			begin += seg_cell_count;
 		}
+		if (begin != map.end())
+		{
+			result.push_back(MapSegment(begin, begin + seg_cell_count));
+		}
+
 		return result;
+	}
+
+	void Game::DispatchThreadsForPhase(bool odd
+		, std::function<void(CellMatrix::iterator, CellMatrix::iterator)> stdfunc)
+	{
+		std::vector<std::thread> threads;
+		for (auto& seg : mapPieces)
+		{
+			if (odd) threads.push_back(std::thread(stdfunc, seg.begin, seg.end));
+			odd = !odd;
+		}
+		for (auto& thread : threads) thread.join();
 	}
 
 	auto Game::NextStep() -> void
 	{
-		map.ClearCellUpdateRecord();
-		
- 
-		
-		std::vector<std::thread> threads;
+		map.ClearCellUpdateRecord();  
+		DispatchThreadsForPhase(true, std::bind(&Game::MovePhase, this, std::placeholders::_1, std::placeholders::_2));
+		DispatchThreadsForPhase(false, std::bind(&Game::MovePhase, this, std::placeholders::_1, std::placeholders::_2));
+		DispatchThreadsForPhase(true, std::bind(&Game::ReproducePhase, this, std::placeholders::_1, std::placeholders::_2));
+		DispatchThreadsForPhase(false, std::bind(&Game::ReproducePhase, this, std::placeholders::_1, std::placeholders::_2));
 
-		for (auto& seg : splitRes.mainSegments)
-		{
-			threads.push_back(std::thread(&Game:: MovePhase,this, seg.begin, seg.end));
-		}
-		
-		for (auto& thread : threads)
-		{
-			thread.join();
-		}  
-
-		for (auto& seg : splitRes.gapSegments)
-		{
-			MovePhase(seg.begin, seg.end);
-		}
-
-		threads.clear();
-
-		for (auto& seg : splitRes.mainSegments)
-		{
-			threads.push_back(std::thread(&Game::ReproducePhase,this, seg.begin, seg.end));
-		}
-
-		for (auto& thread : threads)
-		{
-			thread.join();
-		}
-
-		for (auto& seg : splitRes.gapSegments)
-		{
-			ReproducePhase(seg.begin, seg.end);
-		} 
-		 
-	 	eventCaller_mapUpdated.Dispatch(map, map.UpdatedCellPositions());
+		eventCaller_mapUpdated.Dispatch(map, map.UpdatedCellPositions());
 	}
 
 	auto Game::ClearDisableStates() -> void
@@ -151,81 +118,30 @@ namespace EcoSim
 				Vector2 dest = cell.Content()->DecideDestination(map, cell.position);
 
 				if (dest == cell.position) // 没动
-				{
-					HandleConsumption(false, cell);
-
+				{ 
+					cell.Damage();
 					// 禁用此格
 					cell.disabled = true;
 				}
 				else // 动了
 				{
 					Cell& destCell = map.Access(dest);
-					
-					if (destCell.Content() != nullptr) // 说明目的处生物被吃了
-					{
-						destCell.Content()->Die();
-						HandleConsumption(true, cell);
-					}
-					else
-					{
-						HandleConsumption(false, cell);
-					}
+
+					if (destCell.Content()) cell.Heal();
+					else cell.Heal();
 
 					// 禁用两格 
 					destCell.disabled = true;
 					cell.disabled = true;
-					
-					mutex.lock();
+
 					// 移动
-					destCell.SetContent(cell.Content());
-					cell.SetContent(nullptr);
-					mutex.unlock();
+					cell.MoveTo(destCell);
 				}
 			}
 		}
 	}
 
-	/// <summary>
-	/// 处理死亡。
-	/// </summary>
-	/// <param name="neighborCell"></param>
-	void Game::HandleDeath(Cell& cell)
-	{ 
-		mutex.lock();
-		cell.Content()->Die();
-		cell.SetContent(nullptr); 
-		mutex.unlock();
-	}
-
-	/// <summary>
-	/// 处理进食行为。
-	/// </summary>
-	/// <param name="didEat">是否发生进食</param>
-	/// <param name="neighborCell">生物所在格子</param>
-	/// <returns></returns>
-	void Game::HandleConsumption(bool didEat, Cell& cell)
-	{
-		auto mortal = sp_dynamic_cast<IMortal>(cell.Content());
-		if (mortal)
-		{
-			if (didEat)
-			{
-				mortal->Health() += mortal->ConsumptionHealthBenifit();
-				if (mortal->Health() > mortal->MaximumHealth())
-				{
-					mortal->Health() = mortal->MaximumHealth();
-				}
-			}
-			mortal->Health() -= mortal->StarvationHealthHarm();
-			if (mortal->Health() <= 0)
-			{ 
-				// 饿死 
-				HandleDeath(cell);
-			}
-		}
-	}
-
-
+  
 
 	auto Game::HandleBirth(CellMatrix& map, Cell& parent_cell) -> void
 	{
@@ -234,14 +150,8 @@ namespace EcoSim
 		for (auto&& childPos : childrenPositions)
 		{
 			Cell& child_cell = map.Access(childPos);
-			mutex.lock();
-			if (child_cell.Content())
-			{
-				child_cell.Content()->Die();
-			}
-			child_cell.SetContent(parent_cell.Content()->Reproduce());
-			child_cell.Content()->Birth(); 
-			mutex.unlock();
+			auto child = parent_cell.Content()->Reproduce();
+			child_cell.OccupyWith(child);  
 			// 禁用子代生物所在格
 			child_cell.disabled = true;
 		}
@@ -257,29 +167,30 @@ namespace EcoSim
 		{
 			Cell& cell = *loop_iter;
 			// 如果为空格子或禁用，就跳过
-			if (cell.Content() != nullptr && !cell.disabled)
+			if (cell.Content() && !cell.disabled)
 			{
-				auto parent_mortal = sp_dynamic_cast<IMortal>(cell.Content());
+				auto parent_mortal = sp_dynamic_cast<IAnimal>(cell.Content());
 
-				// 有年龄概念且年龄过高：无法生育
+				// 生命值过低，无法生育。
 				if (parent_mortal && parent_mortal->Health() < parent_mortal->MinimumReproduceHealth())
 				{
 					continue;
 				}
 
-				auto parent_gendered = sp_dynamic_cast<IGendered>(cell.Content());
+				auto parent_gendered = sp_dynamic_cast<IAnimal>(cell.Content());
 				if (parent_gendered && parent_gendered->Gender() == LivingThingGender::Female)// 有性别概念，则雌性旁边要有雄性才能生育
-				{
-					const CellMatrix& constMap = map;
-					auto surroundings = constMap.SurroundingCells(cell.position); // 找到周围生物
+				{ 
+					auto surroundings =  (map.SurroundingCells(cell.position)); // 找到周围生物
 
 					// 找到周围雄性同种且本回合内未繁殖过的生物 存放在male_positions里
-					auto male_positions = ExtractPositionsOfCells(surroundings, [&cell](const Cell& neighborCell)
+					auto male_positions = map.ExtractCellPositions 
+					 
+					(surroundings, [&cell](const Cell& neighborCell)
 						{
-							auto gendered_neighbor = sp_dynamic_cast<IGendered>(neighborCell.Content());
-							return (gendered_neighbor != nullptr // 有性别
-								&& gendered_neighbor->Gender() == LivingThingGender::Male // 雄性
-								&& neighborCell.disabled == false // 本回合内未繁殖
+							auto gendered_neighbor = sp_dynamic_cast<IAnimal>(neighborCell.Content());
+							return (gendered_neighbor != nullptr													// 有性别
+								&& gendered_neighbor->Gender() == LivingThingGender::Male						// 雄性
+								&& neighborCell.disabled == false												// 本回合内未繁殖
 								&& neighborCell.Content()->TypeIdentifier() == cell.Content()->TypeIdentifier() // 同种
 								);
 						});
@@ -299,10 +210,8 @@ namespace EcoSim
 				}
 			}
 		}
-	}
-
-	Game* Game::activeGame = nullptr;
-	int Game::threadMinimumLoad = 99999;
+	} 
+	Game* Game::activeGame = nullptr; 
 }
 
 

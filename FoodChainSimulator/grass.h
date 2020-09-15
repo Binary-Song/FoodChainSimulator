@@ -4,6 +4,7 @@
 #include "common_includes.h"
 #include "cell.h"
 #include <atomic>
+#include "living_thing.h"
 namespace EcoSim
 {
     /// <summary>
@@ -12,7 +13,8 @@ namespace EcoSim
     class Grass final : public ILivingThing
     { 
     public: 
-         
+        
+        Grass();
 
         static std::atomic<int> population;
 

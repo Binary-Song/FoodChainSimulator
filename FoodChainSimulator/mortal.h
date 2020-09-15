@@ -6,13 +6,15 @@
 
 namespace EcoSim
 {
+    enum class LivingThingGender { Male, Female };
+
     /// <summary>
     /// 有生命值的东西。
     /// </summary>
-    class IMortal
+    class IAnimal
     {
     public:
-        virtual ~IMortal() = default;
+        virtual ~IAnimal() = default;
 
         /// <summary>
         /// 返回一个生命值引用。通过它可以读写生命值。
@@ -49,6 +51,8 @@ namespace EcoSim
         /// </summary>
         /// <returns></returns>
         auto virtual InitialHealth() -> int = 0;
+         
+        virtual LivingThingGender Gender() = 0;
     };
 } // namespace EcoSim
 

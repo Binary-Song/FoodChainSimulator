@@ -95,6 +95,12 @@
     <ClInclude Include="recorder.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="living_thing.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="utils_memory.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

@@ -19,71 +19,55 @@ namespace EcoSim
     {
     public:
         
+        /// <summary>
+        /// 从begin开始到end结束的一块地图。
+        /// </summary>
         struct MapSegment
         {
             CellMatrix::iterator begin, end;
 
-            MapSegment(CellMatrix::iterator begin, CellMatrix::iterator end) : begin(begin), end(end) {}
-        };
+            MapSegment(CellMatrix::iterator begin, CellMatrix::iterator end)
+                : begin(begin), end(end) {}
+        }; 
 
-        struct MapSplitResult
-        {
-            std::vector <MapSegment> mainSegments;
-            std::vector <MapSegment> gapSegments;
-        };
-
+        /// <summary>
+        /// 当前活动的游戏对象。
+        /// </summary>
         static Game *activeGame; 
  
         /// <summary>
-        /// 地图更新事件 
+        /// 地图更新事件类型
         /// </summary>
-        using EventType_MapUpdated = void(const CellMatrix& map, std::vector<Vector2> updatedPositions);
-        
-  
-        /// <summary>
-        /// 报告消息事件
-        /// </summary>
-        using EventType_RaiseMessage = void(std::string message);
- 
-
-        /// <summary>
-        /// 报告问题事件
-        /// </summary>
-        using EventType_RaiseProblem = void(std::string problemDescription);
-
+        using EventType_MapUpdated 
+            = void(const CellMatrix& map, std::vector<Vector2> updatedPositions);
+       
     private:
         
         /// <summary>
         /// 游戏地图
         /// </summary>
         CellMatrix map;
-         
+        
+        /// <summary>
+        /// 地图更新事件的调用器。
+        /// </summary>
         EventCaller<EventType_MapUpdated> eventCaller_mapUpdated;
-        EventCaller<EventType_RaiseMessage> eventCaller_raiseMessage; 
-        EventCaller<EventType_RaiseProblem> eventCaller_raiseProblem;
-         
-        MapSplitResult splitRes;
+        
+        /// <summary>
+        /// 保存的地图切片方案。
+        /// </summary>
+        std::vector <MapSegment> mapPieces;
  
     public:
         /// <summary>
         /// 单个线程处理的最少格子数
         /// </summary>
-        static int threadMinimumLoad;
+        int threadMinimumLoad;
 
         /// <summary>
         /// 地图更新事件
         /// </summary>
         Event<EventType_MapUpdated> event_mapUpdated;
- 
-        /// <summary>
-        /// 报告消息事件
-        /// </summary>
-        Event<EventType_RaiseMessage> event_raiseMessage;
- 
-        /// <summary>
-        /// 报告问题事件
-        /// </summary>
-        Event<EventType_RaiseProblem> event_raiseProblem;
           
         /// <summary>
         /// 用随机地图创建游戏
@@ -104,8 +88,7 @@ namespace EcoSim
         /// </summary>
         /// <returns></returns>
         auto Map() -> const CellMatrix & { return map; }
-
-        std::mutex mutex;
+         
     private:
         /// <summary>
         /// 将所有格子都设置为可用
@@ -124,13 +107,18 @@ namespace EcoSim
         /// </summary>
         /// <returns></returns>
         auto ReproducePhase(CellMatrix::iterator begin, CellMatrix::iterator end) -> void;
-         
-        auto SplitMap() -> MapSplitResult;
-
+        
+        /// <summary>
+        /// 将地图切分成小块，以便分配给多个线程处理。
+        /// </summary>
+        /// <returns></returns>
+        auto SplitMap() -> std::vector<MapSegment>;
         void HandleBirth(CellMatrix& map, Cell& parent_cell);
-        void HandleConsumption(bool didEat, Cell& cell);
-        void HandleDeath(Cell& cell);
-        };
+        void HandleConsumption(bool didEat, Cell& cell); 
+        void DispatchThreadsForPhase(bool odd
+            , std::function<void(CellMatrix::iterator, CellMatrix::iterator)> stdfunc);
+
+ };
 } // namespace EcoSim
 
 #endif // _GAME_H_

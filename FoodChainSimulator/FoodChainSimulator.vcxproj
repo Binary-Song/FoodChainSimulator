@@ -166,11 +166,13 @@
     <ClInclude Include="game.h" />
     <ClInclude Include="gendered.h" />
     <ClInclude Include="grass.h" />
+    <ClInclude Include="living_thing.h" />
     <ClInclude Include="mortal.h" />
     <ClInclude Include="random_gen.h" />
     <ClInclude Include="recorder.h" />
     <ClInclude Include="sheep.h" />
     <ClInclude Include="utils.h" />
+    <ClInclude Include="utils_memory.h" />
     <ClInclude Include="vector2.h" />
     <ClInclude Include="wolf.h" />
   </ItemGroup>

@@ -2,9 +2,12 @@
 #include <iostream>
 #include <string>
 #include <regex> 
-#include "utils.h"
+ 
 namespace EcoSim
 {
+	/// <summary>
+	/// 加载配置文件。
+	/// </summary>
 	class ConfigLoader
 	{
 	private:
@@ -50,7 +53,14 @@ namespace EcoSim
 		}; 
 	
 	public:
+		/// <summary>
+		/// 给定输入流，从中读取配置文件。
+		/// </summary> 
 		auto Load(std::istream& stream) -> void { Load(std::move(stream)); }
+
+		/// <summary>
+		/// 给定输入流，从中读取配置文件。
+		/// </summary> 
 		auto Load(std::istream&& stream) -> void;
 	};
 }

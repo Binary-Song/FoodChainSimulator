@@ -5,13 +5,14 @@
 #include "cell.h"
 #include "mortal.h"
 #include "gendered.h"
+#include "living_thing.h"
 #include <atomic>
 namespace EcoSim
 {
 	/// <summary>
 	/// 狼
 	/// </summary>
-	class Wolf final : public ILivingThing, public IMortal, public IGendered
+	class Wolf final : public ILivingThing, public IAnimal
 	{
 		int health;
 
@@ -20,7 +21,7 @@ namespace EcoSim
 		LivingThingGender gender;
 
 	public:
-		Wolf(); 
+		Wolf();
 
 		static std::atomic<int> population;
 

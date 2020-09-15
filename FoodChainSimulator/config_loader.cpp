@@ -24,7 +24,7 @@ namespace EcoSim
 
 	MetaMap<int> intMap = {
 		  { "Global.seed", &seed}
-		, { "Global.threadMinimumLoad", &Game::threadMinimumLoad}
+		, { "Global.threadMinimumLoad", &Game::activeGame->threadMinimumLoad}
 		, { "Global.displayMode", &Display::displayMode}
 		, { "Grass.targetOffspringCount",&Grass::targetOffspringCount }
 		, { "Sheep.consumptionHealthBenifit",&Sheep::consumptionHealthBenifit }
@@ -44,13 +44,7 @@ namespace EcoSim
 	MetaMap<float> floatMap = {};
 	MetaMap<bool> boolMap = {};
 	MetaMap<std::string> stringMap = {};
-
-
-	/// <summary>
-	/// 词法分析。可能会抛出c字符串异常。
-	/// </summary>
-	/// <param name="stream"></param>
-	/// <returns></returns>
+	 
 	auto ConfigLoader::Lexer::Lex(std::istream& stream) -> std::vector<Token>
 	{
 		std::vector<Token> result;
