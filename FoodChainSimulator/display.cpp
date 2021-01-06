@@ -142,6 +142,7 @@ namespace EcoSim
 		{
 			BufferCell(cell);
 		}
+		DisplayBuffer();
 	}
 
 	int Display::Width = 0;

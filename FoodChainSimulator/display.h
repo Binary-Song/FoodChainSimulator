@@ -35,15 +35,16 @@ namespace EcoSim
 		/// <returns></returns>
 		auto static BufferCell(const Cell& cell) -> void;
 
+	private:
 		/// <summary>
 		/// 响应游戏的地图更新事件。
 		/// </summary>
 		/// <param name="updatedPositions"></param>
 		/// <returns></returns>
-		auto static MapUpdatedEventHandler(const CellMatrix& map, std::vector<Vector2> updatedPositions) -> void;
+		void static MapUpdatedEventHandler(const CellMatrix& map, std::vector<Vector2> updatedPositions);
 
 
-		auto static DisplayBuffer() -> void;
+		void static DisplayBuffer();
 	};
 } // namespace EcoSim
 

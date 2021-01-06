@@ -3,48 +3,55 @@
 #include <assert.h>
 #include "mortal.h"
 #include "utils_memory.h"
+#include <array>
 namespace EcoSim
 {
 	void Cell::MoveTo(Cell& dest)
 	{
-		assert(content);
-		OccupyWith(content);
+		if (!content)
+		{
+			int t = 0;
+		}
+		assert(dest.position != position);
+
+		dest.OccupyWith(content);
 		content = nullptr;
+		matrix->mutex_updatedCellPositions.lock();
+		matrix->updatedCellPositions.push_back(position);
+		matrix->mutex_updatedCellPositions.unlock();
 	}
 
 	void Cell::Damage()
 	{
 		assert(content);
-		auto mortal = sp_dynamic_cast<IAnimal>( content );
-		if (mortal)
+		auto mortal = sp_dynamic_cast<IAnimal>(content);
+		if (!mortal) return;
+
+		mortal->Health() -= mortal->StarvationHealthHarm();
+		if (mortal->Health() <= 0)
 		{
-			mortal->Health() -= mortal->StarvationHealthHarm();
-			if (mortal->Health() <= 0)
-			{
-				OccupyWith(nullptr);
-			}
-		}
+			OccupyWith(nullptr);
+		} 
 	}
 
 	void Cell::Heal()
 	{
 		assert(content);
 		auto mortal = sp_dynamic_cast<IAnimal>(content);
-		if (mortal)
+		if (!mortal) return;
+ 
+		mortal->Health() += mortal->ConsumptionHealthBenifit();
+		if (mortal->Health() > mortal->MaximumHealth())
 		{
-			mortal->Health() += mortal->ConsumptionHealthBenifit();
-			if (mortal->Health() > mortal->MaximumHealth())
-			{
-				mortal->Health() = mortal->MaximumHealth();
-			}
-		}
+			mortal->Health() = mortal->MaximumHealth();
+		} 
 	}
 
 	void Cell::OccupyWith(std::shared_ptr <ILivingThing> new_content)
 	{
-		if(content) content->Die(); 
+		if (content) content->Die();
 		content = new_content;
-		matrix->mutex_updatedCellPositions.lock();  
+		matrix->mutex_updatedCellPositions.lock();
 		matrix->updatedCellPositions.push_back(position);
 		matrix->mutex_updatedCellPositions.unlock();
 	}
@@ -53,9 +60,9 @@ namespace EcoSim
 	{
 		assert(!content);
 		content = new_content;
-		matrix->mutex_updatedCellPositions.lock(); 
+		matrix->mutex_updatedCellPositions.lock();
 		matrix->updatedCellPositions.push_back(position);
-		matrix->mutex_updatedCellPositions.unlock(); 
+		matrix->mutex_updatedCellPositions.unlock();
 	}
 
 	auto CellMatrix::IsValid(Vector2 pos) const -> bool
@@ -83,27 +90,22 @@ namespace EcoSim
 		return cells[coor.x + coor.y * width];
 	}
 
-	auto CellMatrix::SurroundingCells(Vector2 pos) -> std::vector<Cell*>
+	auto CellMatrix::SurroundingCells(Vector2 pos) const -> std::vector<Vector2>
 	{
-		std::vector<Cell*> resultList;
+		std::vector<Vector2> resultList;
 		Vector2 offsets[]{
 			Vector2(0, 1), Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0),
 			Vector2(1, 1), Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1)
 		};
 		for (auto& offset : offsets)
 		{
-			if (IsValid(pos + offset))
+			Vector2 v = pos + offset;
+			if (IsValid(v))
 			{
-				Cell& cell = Access(pos + offset);
-				resultList.push_back(&cell);
+				resultList.push_back(v);
 			}
 		}
 		return resultList;
-	}
-
-	auto CellMatrix::SurroundingCells(Vector2 pos) const-> const std::vector<Cell*>
-	{
-		return SurroundingCells(pos);
 	}
 
 	auto CellMatrix::UpdatedCellPositions() -> std::vector<Vector2>
@@ -116,37 +118,22 @@ namespace EcoSim
 		updatedCellPositions.clear();
 	}
 
-	auto CellMatrix::ExtractCellPositions(const std::vector<  Cell*> &cells) -> std::vector<Vector2>
+	auto CellMatrix::FilterPositions(std::vector<Vector2>positions
+		, std::function<bool(const Cell&)> predicate) const
+		-> std::vector<Vector2>
 	{
 		std::vector<Vector2> result;
-		for (auto&& cell : cells)
+		for (auto&& position : positions)
 		{
-			result.push_back(cell->position);
-		}
-		return result;
-	}
-
-	auto CellMatrix::ExtractCellPositions(const std::vector<   Cell*>& cells
-		, std::function<bool(const Cell&)> predicate)
-		->std::vector<Vector2>
-	{
-		std::vector<Vector2> result;
-		for (auto&& cell : cells)
-		{
-			if (predicate(*cell))
+			if (predicate(Access(position)))
 			{
-				result.push_back(cell->position);
+				result.push_back(position);
 			}
 		}
 		return result;
 	}
 
-	auto CellMatrix::ExtractEmptyCellPositions(const std::vector<  Cell*> &cells)
-		->std::vector<Vector2>
-	{
-		return ExtractCellPositions(cells,
-			[](const Cell& cell) {return cell.Content() == nullptr; });
-	}
+
 
 	CellMatrix::CellMatrix(int width, int height)
 		: width(width),
@@ -166,15 +153,5 @@ namespace EcoSim
 				++y;
 			}
 		}
-	}
-
-	auto ExtractPositionsOfCells(const std::vector<  Cell*>& cells) -> std::vector<Vector2>
-	{
-		std::vector<Vector2> result;
-		for (auto&& cell : cells)
-		{
-			result.push_back(cell->position);
-		}
-		return result;
 	}
 }

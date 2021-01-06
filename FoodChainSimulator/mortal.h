@@ -50,9 +50,19 @@ namespace EcoSim
         /// 出生时的生命值。
         /// </summary>
         /// <returns></returns>
-        auto virtual InitialHealth() -> int = 0;
+        auto virtual InitialHealth() -> int = 0; 
+        
+        /// <summary>
+        /// 动物的性别
+        /// </summary>
+        /// <returns></returns>
+        auto virtual Gender() ->LivingThingGender = 0;
          
-        virtual LivingThingGender Gender() = 0;
+        /// <summary>
+        /// 食物的TypeIdentifier
+        /// </summary>
+        /// <returns></returns>
+        auto virtual Food()->std::string = 0;
     };
 } // namespace EcoSim
 

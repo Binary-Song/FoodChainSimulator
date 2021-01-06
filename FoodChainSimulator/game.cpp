@@ -4,12 +4,9 @@
 #include <thread>
 #include <time.h>
 #include <functional>
-
 #include "game.h"
 #include "sheep.h"
-
 #include "wolf.h"
-
 #include "random_gen.h"
 namespace EcoSim
 {
@@ -61,14 +58,14 @@ namespace EcoSim
 			* map.width;
 
 		auto begin = map.begin();
-		while (begin + seg_cell_count <= map.end())
+		while (begin <= map.end() - seg_cell_count)
 		{
 			result.push_back(MapSegment(begin, begin + seg_cell_count));
 			begin += seg_cell_count;
 		}
 		if (begin != map.end())
 		{
-			result.push_back(MapSegment(begin, begin + seg_cell_count));
+			result.push_back(MapSegment(begin, map.end()));
 		}
 
 		return result;
@@ -77,14 +74,24 @@ namespace EcoSim
 	void Game::DispatchThreadsForPhase(bool odd
 		, std::function<void(CellMatrix::iterator, CellMatrix::iterator)> stdfunc)
 	{
-		std::vector<std::thread> threads;
-		for (auto& seg : mapPieces)
+		if (mapPieces.size() == 1)
 		{
-			if (odd) threads.push_back(std::thread(stdfunc, seg.begin, seg.end));
-			odd = !odd;
+			if (odd)  stdfunc(mapPieces[0].begin, mapPieces[0].end);
 		}
-		for (auto& thread : threads) thread.join();
-	}
+		else
+		{
+			std::vector<std::thread> threads;
+			for (auto& seg : mapPieces)
+			{
+				if (odd)
+				{
+					threads.push_back(std::thread(stdfunc, seg.begin, seg.end));
+				}
+				odd = !odd;
+			}
+			for (auto& thread : threads) thread.join(); 
+		}
+ 	}
 
 	auto Game::NextStep() -> void
 	{
@@ -112,7 +119,7 @@ namespace EcoSim
 		{
 			Cell& cell = *loop_iter;
 			// 如果为空格子或禁用，就跳过
-			if (cell.Content() != nullptr && !cell.disabled)
+			if (cell.Content() && !cell.disabled)
 			{
 				// 取得目的地
 				Vector2 dest = cell.Content()->DecideDestination(map, cell.position);
@@ -127,15 +134,20 @@ namespace EcoSim
 				{
 					Cell& destCell = map.Access(dest);
 
-					if (destCell.Content()) cell.Heal();
-					else cell.Heal();
+					auto anim = sp_dynamic_cast<IAnimal>(cell.Content());
+					if (destCell.Content() && anim && destCell.Content()->TypeIdentifier() == anim->Food()) {
+						cell.Heal();
+					}
+					else {
+						cell.Damage();
+					}
 
 					// 禁用两格 
 					destCell.disabled = true;
 					cell.disabled = true;
 
 					// 移动
-					cell.MoveTo(destCell);
+					if(cell.Content()) cell.MoveTo(destCell);
 				}
 			}
 		}
@@ -183,12 +195,12 @@ namespace EcoSim
 					auto surroundings =  (map.SurroundingCells(cell.position)); // 找到周围生物
 
 					// 找到周围雄性同种且本回合内未繁殖过的生物 存放在male_positions里
-					auto male_positions = map.ExtractCellPositions 
+					auto male_positions = map.FilterPositions 
 					 
 					(surroundings, [&cell](const Cell& neighborCell)
 						{
 							auto gendered_neighbor = sp_dynamic_cast<IAnimal>(neighborCell.Content());
-							return (gendered_neighbor != nullptr													// 有性别
+							return (gendered_neighbor != nullptr												// 有性别
 								&& gendered_neighbor->Gender() == LivingThingGender::Male						// 雄性
 								&& neighborCell.disabled == false												// 本回合内未繁殖
 								&& neighborCell.Content()->TypeIdentifier() == cell.Content()->TypeIdentifier() // 同种
@@ -212,6 +224,8 @@ namespace EcoSim
 		}
 	} 
 	Game* Game::activeGame = nullptr; 
+	int Game::threadMinimumLoad = -1;
+	int Game::cycleTime = 0;
 }
 
 

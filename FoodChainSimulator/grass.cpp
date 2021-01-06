@@ -11,7 +11,7 @@ namespace EcoSim
     auto Grass::DecideChildrenLocation(const CellMatrix &map, Vector2 pos) -> std::vector<Vector2>
     {
         auto surrounds = map.SurroundingCells(pos);
-        auto empties = map.ExtractEmptyCellPositions(surrounds);
+        auto empties = map.FilterEmptyPositions(surrounds);
         return RandomSelect(empties, Grass::targetOffspringCount); 
     }
     

@@ -62,6 +62,8 @@ namespace EcoSim
 		auto Die() const -> void override {  population -- ; }
 
 		auto Birth() const -> void override { population++; }
+
+		auto virtual Food()->std::string { return "Grass"; } 
 	};
 } // namespace EcoSim
 #endif // _GRASS_H_

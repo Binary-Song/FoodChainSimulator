@@ -183,22 +183,14 @@ namespace EcoSim
 		/// 返回下一个迭代器。
 		/// </summary> 
 		auto next(const_iterator iter) const -> const_iterator { return ++iter; }
-
+ 
 		/// <summary>
 		/// 返回位置周围的至多9个格子。越界的不会包括在内。
 		/// </summary>
 		/// <param name="map">地图</param>
 		/// <param name="pos">此格位置</param>
 		/// <returns></returns>
-		auto SurroundingCells(Vector2 pos)->std::vector<Cell*>;
-
-		/// <summary>
-		/// 返回位置周围的至多9个格子。越界的不会包括在内。
-		/// </summary>
-		/// <param name="map">地图</param>
-		/// <param name="pos">此格位置</param>
-		/// <returns></returns>
-		auto SurroundingCells(Vector2 pos) const->const std::vector< Cell*>;
+		auto SurroundingCells(Vector2 pos) const->std::vector<Vector2>;
 
 		/// <summary>
 		/// 返回所有被更新的Cell的位置。
@@ -209,36 +201,34 @@ namespace EcoSim
 		/// 清空Cell更新记录。
 		/// </summary> 
 		auto ClearCellUpdateRecord() -> void;
-
-		/// <summary>
-		/// 取Cell集合对应的坐标集合。
-		/// </summary> 
-		static auto ExtractCellPositions(const std::vector<Cell*>& cells)
-			->std::vector<Vector2>;
+		 
 
 		/// <summary>
 		/// 取Cell集合对应的坐标集合。指定筛选Cell的条件。
 		/// </summary> 
-		static auto ExtractCellPositions(const std::vector<Cell*>& cells
-			, std::function<bool(const Cell&)> predicate)
-			->std::vector<Vector2>;
+		  auto FilterPositions(std::vector<Vector2>positions
+			, std::function<bool(const Cell&)> predicate) const
+			-> std::vector<Vector2>;
 
 		/// <summary>
 		/// 取Cell集合对应的坐标集合。只有空Cell会被包含。
 		/// </summary>
 		/// <param name="cells"></param>
 		/// <returns></returns>
-		static auto ExtractEmptyCellPositions(const std::vector<Cell*>& cells)
-			->std::vector<Vector2>;
+		  auto FilterEmptyPositions(std::vector<Vector2>positions)   const 
+			-> std::vector<Vector2> {
+			  return FilterPositions(positions,
+				  [](const Cell& cell) {return cell.Content() == nullptr; });
+		  }
 
 		/// <summary>
 		/// 取Cell集合对应的坐标集合。只有内容是类型是T的会被包含。T必须继承自ILivingThing
 		/// </summary> 
 		template <typename T>
-		static auto ExtractCellPositions(const std::vector<Cell*>& cells)
-			->std::vector<Vector2>
+		  auto FilterPositionsByType(std::vector<Vector2>positions) const
+			-> std::vector<Vector2>
 		{
-			return ExtractCellPositions(cells, [](const Cell& cell)
+			return FilterPositions(positions, [](const Cell& cell)
 				{
 					return sp_dynamic_cast<T>(cell.Content()) != nullptr;
 				});

@@ -48,7 +48,7 @@ namespace EcoSim
 		/// </summary>
 		/// <returns></returns>
 		auto virtual TypeIdentifier() const->std::string = 0;
-
+		 
 		auto virtual Birth() const -> void = 0;
 
 		auto virtual Die() const -> void = 0;

@@ -19,13 +19,13 @@ namespace EcoSim
 	{
 		// 找到周围所有羊的位置
 		auto surrounds = map.SurroundingCells(pos);
-		auto sheepPos = map.ExtractCellPositions<Sheep>(surrounds);
+		auto sheepPos = map.FilterPositionsByType<Sheep>(surrounds);
 		// 若有，则随机选一个
 		if (sheepPos.size() > 0)
 			return RandomSelect(sheepPos);
 
 		// 若无，则找到周围所有草或空格子的位置
-		auto okPos = map.ExtractCellPositions(surrounds, [](const Cell& cell) {
+		auto okPos = map.FilterPositions(surrounds, [](const Cell& cell) {
 			return (cell.Content() == nullptr || sp_dynamic_cast<Grass>(cell.Content()));
 			});
 		
@@ -33,10 +33,7 @@ namespace EcoSim
 		if (okPos.size() > 0)
 		{
 			auto pos = RandomSelect(okPos);
-			if (sp_dynamic_cast<Grass>(map.Access(pos).Content()))// 如果是草，则还要抵消掉加血
-			{
-				 health -= consumptionHealthBenifit;
-			}
+		 
 			return pos;
 		}
 		// 若无，则不动。
@@ -46,7 +43,7 @@ namespace EcoSim
 	auto Wolf::DecideChildrenLocation(const CellMatrix& map, Vector2 pos)->std::vector<Vector2> 
 	{
 		auto surrounds = map.SurroundingCells(pos);
-		auto candidatePos = map.ExtractCellPositions(surrounds, [](const Cell& cell) {
+		auto candidatePos = map.FilterPositions(surrounds, [](const Cell& cell) {
 			return sp_dynamic_cast<Grass>(cell.Content()) || cell.Content() == nullptr;
 			});
 		return RandomSelect(candidatePos, Wolf::targetOffspringCount);
@@ -65,5 +62,4 @@ namespace EcoSim
 	int Wolf::minimumReproduceHealth = 16;
 
 	std::atomic<int> Wolf::population(0);
-}
-
+} 

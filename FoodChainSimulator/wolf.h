@@ -35,7 +35,7 @@ namespace EcoSim
 
 		static int initialHealth;
 
-		static int minimumReproduceHealth;
+		static int minimumReproduceHealth; 
 
 		auto DecideDestination(const CellMatrix& map, Vector2 pos)->Vector2 override;
 
@@ -64,6 +64,9 @@ namespace EcoSim
 		auto Die() const -> void override { population--; }
 
 		auto Birth() const -> void override { population++; }
+
+		auto virtual Food()->std::string { return "Sheep"; }
+
 	};
 } // namespace EcoSim
 #endif // _GRASS_H_

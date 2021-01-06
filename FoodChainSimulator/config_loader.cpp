@@ -1,6 +1,8 @@
 #include "config_loader.h"
 #include <map>
-#include <algorithm>
+#include <algorithm> 
+#include <regex> 
+#include <sstream>
 #include "game.h"
 #include "sheep.h"
 #include "grass.h"
@@ -8,44 +10,78 @@
 #include "random_gen.h"
 #include "display.h"
 namespace EcoSim
-{
-	std::regex ConfigLoader::Lexer::r_section("^\\[[._a-zA-Z][._a-zA-Z0-9]*\\]");
-	std::regex ConfigLoader::Lexer::r_comment("^#.*?$");
-	std::regex ConfigLoader::Lexer::r_equal("^=");
-	std::regex ConfigLoader::Lexer::r_space("^[\\s]+");
-	std::regex ConfigLoader::Lexer::r_string("^'.*'");
-	std::regex ConfigLoader::Lexer::r_bool("^(true)|(false)");
-	std::regex ConfigLoader::Lexer::r_field("^[\\._a-zA-Z][\\._a-zA-Z0-9]*");
-	std::regex ConfigLoader::Lexer::r_column("^:");
-	std::regex ConfigLoader::Lexer::r_number("^[+-]?[0-9]+(\\.[0-9]+)?");
+{ 
+	enum class TokenType
+	{
+		Section, Comment, Equal, String, Space, Field, Column, Number, Bool
+	};
+	 
+	struct Token
+	{
+		TokenType type;
+		std::string text;
+		Token(TokenType type, std::string text)
+			:type(type), text(text) {}
+		auto IsValue() -> bool
+		{
+			return type == TokenType::Bool || type == TokenType::String || type == TokenType::Number;
+		}
+	};
+	struct Rule
+	{
+		std::regex& regex;
+		TokenType tokenType;
+		Rule(std::regex& regex, TokenType tokenType) :regex(regex), tokenType(tokenType) {}
+	};
+
+	class Lexer
+	{
+	public:
+		auto Lex(std::istream& stream)->std::vector<Token>;
+	};
 
 	template <typename T>
 	using MetaMap = std::map<std::string, T*>;
 
-	MetaMap<int> intMap = {
-		  { "Global.seed", &seed}
-		, { "Global.threadMinimumLoad", &Game::activeGame->threadMinimumLoad}
-		, { "Global.displayMode", &Display::displayMode}
-		, { "Grass.targetOffspringCount",&Grass::targetOffspringCount }
-		, { "Sheep.consumptionHealthBenifit",&Sheep::consumptionHealthBenifit }
-		, { "Sheep.initialHealth",&Sheep::initialHealth }
-		, { "Sheep.maximumHealth",&Sheep::maximumHealth }
-		, { "Sheep.minimumReproduceHealth",&Sheep::minimumReproduceHealth }
-		, { "Sheep.starvationHealthHarm",&Sheep::starvationHealthHarm }
-		, { "Sheep.targetOffspringCount",&Sheep::targetOffspringCount }
-		, { "Wolf.consumptionHealthBenifit",&Wolf::consumptionHealthBenifit }
-		, { "Wolf.initialHealth",&Wolf::initialHealth }
-		, { "Wolf.maximumHealth",&Wolf::maximumHealth }
-		, { "Wolf.minimumReproduceHealth",&Wolf::minimumReproduceHealth }
-		, { "Wolf.starvationHealthHarm",&Wolf::starvationHealthHarm }
-		, { "Wolf.targetOffspringCount",&Wolf::targetOffspringCount }
-	};
-
+	MetaMap<int> intMap = {};
 	MetaMap<float> floatMap = {};
 	MetaMap<bool> boolMap = {};
 	MetaMap<std::string> stringMap = {};
+
+	std::regex r_section("^\\[[._a-zA-Z][._a-zA-Z0-9]*\\]");
+	std::regex r_comment("^#.*?$");
+	std::regex r_equal("^=");
+	std::regex r_space("^[\\s]+");
+	std::regex r_string("^'.*'");
+	std::regex r_bool("^(true)|(false)");
+	std::regex r_field("^[\\._a-zA-Z][\\._a-zA-Z0-9]*");
+	std::regex r_column("^:");
+	std::regex r_number("^[+-]?[0-9]+(\\.[0-9]+)?");
+
+	ConfigLoader::ConfigLoader()
+	{
+		intMap = {
+			 { "Global.seed", &seed}
+			,{ "Global.cycleTimeMs", &Game::cycleTime}
+		   , { "Global.threadMinimumLoad", &(Game::threadMinimumLoad )}
+		   , { "Global.displayMode", &Display::displayMode}
+		   , { "Grass.targetOffspringCount",&Grass::targetOffspringCount }
+		   , { "Sheep.consumptionHealthBenifit",&Sheep::consumptionHealthBenifit }
+		   , { "Sheep.initialHealth",&Sheep::initialHealth }
+		   , { "Sheep.maximumHealth",&Sheep::maximumHealth }
+		   , { "Sheep.minimumReproduceHealth",&Sheep::minimumReproduceHealth }
+		   , { "Sheep.starvationHealthHarm",&Sheep::starvationHealthHarm }
+		   , { "Sheep.targetOffspringCount",&Sheep::targetOffspringCount }
+		   , { "Wolf.consumptionHealthBenifit",&Wolf::consumptionHealthBenifit }
+		   , { "Wolf.initialHealth",&Wolf::initialHealth }
+		   , { "Wolf.maximumHealth",&Wolf::maximumHealth }
+		   , { "Wolf.minimumReproduceHealth",&Wolf::minimumReproduceHealth }
+		   , { "Wolf.starvationHealthHarm",&Wolf::starvationHealthHarm }
+		   , { "Wolf.targetOffspringCount",&Wolf::targetOffspringCount }
+		};
+	}
 	 
-	auto ConfigLoader::Lexer::Lex(std::istream& stream) -> std::vector<Token>
+	auto Lexer::Lex(std::istream& stream) -> std::vector<Token>
 	{
 		std::vector<Token> result;
 
@@ -90,17 +126,13 @@ namespace EcoSim
 			}
 			lineNo++;
 		}
-
 		return result;
 	}
 
-	enum class ValueType
-	{
-		Bool, Int, Float, String, None
-	};
 
 
-	static auto FindType(std::string name) -> ValueType
+
+	auto ConfigLoader::FindType(std::string name) -> ValueType
 	{
 		if (std::find_if(intMap.begin(), intMap.end(), [=](std::pair<std::string, int*> pair) {return pair.first == name; }) != intMap.end())
 		{
@@ -183,5 +215,16 @@ namespace EcoSim
 				throw std::exception(("Unexpected Token `" + token.text + "`.").c_str());
 			}
 		}
+	}
+
+	auto ConfigLoader::StrInfo()->std::string
+	{
+		std::stringstream strm;
+		for (auto&& pair : intMap) {
+			auto key = pair.first;
+			auto val = *pair.second;
+			strm << key << ":" << val << std::endl;
+		}
+		return strm.str();
 	}
 }

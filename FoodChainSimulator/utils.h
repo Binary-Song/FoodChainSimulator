@@ -48,9 +48,7 @@ namespace EcoSim {
 		assert(target.size() > 0);
 		return RandomSelect(target, 1)[0];
 	}
-
-
-
+	 
 	std::wstring GetExeDir();
 }
 #endif

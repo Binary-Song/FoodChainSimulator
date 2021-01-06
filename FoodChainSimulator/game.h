@@ -34,6 +34,8 @@ namespace EcoSim
         /// 当前活动的游戏对象。
         /// </summary>
         static Game *activeGame; 
+
+        static int cycleTime;
  
         /// <summary>
         /// 地图更新事件类型
@@ -62,7 +64,7 @@ namespace EcoSim
         /// <summary>
         /// 单个线程处理的最少格子数
         /// </summary>
-        int threadMinimumLoad;
+        static int threadMinimumLoad;
 
         /// <summary>
         /// 地图更新事件

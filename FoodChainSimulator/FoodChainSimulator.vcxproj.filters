@@ -104,5 +104,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="rules.ini">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>
