@@ -170,7 +170,6 @@
     <ClInclude Include="display.h" />
     <ClInclude Include="event_system.h" />
     <ClInclude Include="game.h" />
-    <ClInclude Include="gendered.h" />
     <ClInclude Include="grass.h" />
     <ClInclude Include="living_thing.h" />
     <ClInclude Include="mortal.h" />
